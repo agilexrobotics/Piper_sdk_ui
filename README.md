@@ -94,7 +94,7 @@ pyqt                   /home/tian/miniconda3/envs/pyqt
 ```
 在 ./bashrc中添加快捷指令
 ```shell
-echo "alias pui='~/miniconda3/envs/pyqt/bin/python ~/Piper_SDK_UI/piper_ui.py'" >> ~/.bashrc && source ~/.bashrc
+echo "alias pui='~/miniconda3/envs/pyqt5/bin/python ~/Piper_SDK_UI/piper_ui.py'" >> ~/.bashrc && source ~/.bashrc
 ```
 注意更改conda环境和piper_ui.py的路径为自己的路径
 

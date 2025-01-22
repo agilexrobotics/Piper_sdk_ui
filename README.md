@@ -1,3 +1,5 @@
+[CN](README(CN).md)
+
 ## 1 安装方法
 
 ### 1.1 安装环境
@@ -69,6 +71,7 @@ pip install pyqt5
 #### 2.1.1 常规运行
 
 ```shell
+cd ~/Piper_sdk_ui
 conda activate pyqt5
 ```
 ```shell

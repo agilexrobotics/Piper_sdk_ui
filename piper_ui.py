@@ -147,6 +147,10 @@ class MainWindow(QWidget):
         self.arm_combobox.setEnabled(self.is_found and self.is_activated)
         self.master_flag = False
 
+        # 更改端口名字
+        self.name_edit = QTextEdit()
+        self.name_edit.setFixedSize(100, 40)
+        self.name_edit.setEnabled(self.is_activated)
 
         # 激活端口
         self.button_activatecan = QPushButton('Activate CAN Port')
@@ -372,17 +376,18 @@ class MainWindow(QWidget):
         # 布局
         self.layout.addWidget(self.button_findcan, 0, 0)  # 第0行，第0列
         self.layout.addWidget(self.port_combobox, 0, 1)
-        self.layout.addWidget(self.button_activatecan, 0, 2)
-        self.layout.addWidget(self.button_enable, 0, 3)
-        self.layout.addWidget(self.button_disable, 0, 4)
+        self.layout.addWidget(self.name_edit, 0, 2)
+        self.layout.addWidget(self.button_activatecan, 0, 3)
+        self.layout.addWidget(self.button_enable, 0, 4)
+        self.layout.addWidget(self.button_disable, 0, 5)
 
         self.layout.addWidget(self.button_reset, 1, 0)
         self.layout.addWidget(self.button_gripper_zero, 1, 1)
         self.layout.addWidget(self.button_go_zero, 1, 2)
         self.layout.addWidget(self.arm_combobox, 1, 3)
         self.layout.addWidget(self.button_config_init, 1, 4)
-        self.layout.addWidget(frame, 2, 0, 3, 2)
-        self.layout.addWidget(read_frame, 2, 2, 3, 4)
+        self.layout.addWidget(frame, 2, 0, 3, 3)
+        self.layout.addWidget(read_frame, 2, 3, 3, 4)
         self.layout.addWidget(self.label, 0, self.layout.columnCount())
         self.layout.addWidget(self.hardware_edit, 1, self.layout.columnCount()-1)
         self.layout.addWidget(self.button_hardware,2,self.layout.columnCount()-1)
@@ -399,19 +404,68 @@ class MainWindow(QWidget):
         self.arm_combobox.currentIndexChanged.connect(self.on_arm_mode_combobox_select)
 
         self.password = None
-
+        self.enable_status_thread = None
         self.Teach_pendant_stroke = 100
+
+        self.piper = None
+
      
     # 读取硬件信息
     def readhardware(self):
         time.sleep(0.1)
         self.hardware_edit.setText(f"Hardware version\n{self.piper.GetPiperFirmwareVersion()}")
-
-    
+    def show_warning(self):
+            # 创建警告消息框
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Warning)  # 设置消息框图标为警告
+        msg.setWindowTitle("Warnning")  # 设置消息框标题
+        msg.setText("Invalid port selected, please re-find the CAN port.")  # 设置提示框的内容
+        msg.setStandardButtons(QMessageBox.Ok)  # 设置标准按钮（“确定”按钮）
+        msg.exec_()  # 显示消息框
     # 端口选择后的处理
     def on_port_combobox_select(self):
-        self.selected_port = self.port_combobox.currentIndex()        
-        self.text_edit.append(f"Selected Port: can{self.selected_port}")
+        if not hasattr(self, 'selected_port'):  # Check if 'selected_port' is already set
+            self.selected_port = 0  # Set default value to the first item (index 0)
+
+        current_index = self.port_combobox.currentIndex()
+    
+        # 检查是否有有效的选择（索引 >= 0）
+        if current_index >= 0:
+            self.selected_port = current_index  # 更新为有效的选择
+            self.text_edit.append(f"Selected Port: can{self.selected_port}")
+        else:
+            # 如果没有有效选择，可以处理该情况
+            self.text_edit.append("没有选择有效的端口。")
+            self.text_edit.append(f"Selected Port: can{self.selected_port}")
+
+        if 0 <= self.selected_port < len(self.port_matches):
+            self.name_edit.clear()
+            self.name_edit.append(self.port_matches[self.selected_port][0])
+            # print(self.port_matches[0][2])
+            if self.port_matches[self.selected_port][2] == str(True):
+                self.is_activated = True
+            elif self.port_matches[self.selected_port][2] == str(False): 
+                self.is_activated = False
+        else :
+            self.show_warning()
+        self.arm_combobox.setEnabled(self.is_found and self.is_activated)
+        self.button_enable.setEnabled(self.is_found and self.is_activated)
+        self.button_disable.setEnabled(self.is_found and self.is_activated)
+        self.button_reset.setEnabled(self.is_found and self.is_activated)
+        self.button_go_zero.setEnabled(self.is_found and self.is_activated)
+        self.button_gripper_zero.setEnabled(self.is_found and self.is_activated)
+        self.button_config_init.setEnabled(self.is_found and self.is_activated)
+        self.slider.setEnabled(self.is_found and self.is_activated)
+        self.gripper_combobox.setEnabled(self.is_found and self.is_activated)
+        self.button_confirm.setEnabled(self.is_found and self.is_activated)
+        self.button_read_confirm.setEnabled(self.is_found and self.is_activated)
+        self.installpos_combobox.setEnabled(self.is_found and self.is_activated)
+        self.button_installpos_confirm.setEnabled(self.is_found and self.is_activated)
+        self.button_read_acc_limit.setEnabled(self.is_found and self.is_activated)
+        self.read_combobox.setEnabled(self.is_found and self.is_activated and self.start_button_pressed_select)
+        self.button_hardware.setEnabled(self.is_found and self.is_activated)
+        self.button_gripper_clear_err.setEnabled(self.is_found and self.is_activated)
+        self.name_edit.setEnabled(self.is_activated)
 
     # 主从臂选择后的处理
     def on_arm_mode_combobox_select(self):
@@ -489,29 +543,86 @@ class MainWindow(QWidget):
 
     # 查找端口
     def run_findcan(self):
-        self.password = self.prompt_for_password()
+        # 检查密码是否已经设置
         if not self.password:
-            return
-        self.port_matches = []   
+            self.password = self.prompt_for_password()
+            if not self.password:
+                return
+
+        self.port_combobox.clear()  # 清空下拉框中的旧数据
+
         script_dir = os.path.dirname(os.path.realpath(__file__))
         script_path = os.path.join(script_dir, 'find_all_can_port.sh')
         self.process = QProcess(self)
-        command = f"echo {self.password} | sudo -S bash {script_path}"
-        self.process.start('bash', ['-c', command])   
-        def print():
-            data = self.process.readAllStandardOutput().data().decode()
-            # 正则表达式筛选端口名称和端口信息
-            matches = re.findall(r'接口\s*(\w+).*?USB\s*端口\s*([\w.-]+:\d+\.\d+)', data)
-            self.port_matches.extend(matches)
-            port_num = len(self.port_matches)
-            self.text_edit.append(f"Found {port_num} ports\n")
+        command_find = f"echo {self.password} | sudo -S bash {script_path}"
+        self.process.start('bash', ['-c', command_find])  
+        time.sleep(0.01) 
+        def updateprint():
+            data = self.process.readAllStandardOutput().data().decode('utf-8')
+            self.text_edit.append(data)
+
+            # 正则表达式提取端口信息
+            matches = re.findall(r'接口名称:\s*(\w+)\s*端口号:\s*([\w.-]+:\d+\.\d+)\s*是否已激活:\s*(\S+)', data)
+            # if not any(match[0] == matches[0] for match in self.port_matches):
+            #     self.port_matches.extend(list(matches))
+
             if matches:
                 for match in matches:
-                    self.text_edit.append(f"Port Name: {match[0]}  Port: {match[1]}\n")
-                    self.port_combobox.addItem(match[0])
-                    # self.text_edit.append(f"{match[0]}已添加")
-        self.process.readyReadStandardOutput.connect(print)
+                    # 显示端口信息
+                    self.text_edit.append(f"Port Name: {match[0]}  Port: {match[1]}  Activated: {match[2]}\n")
+                    match_num = next((row for row in self.port_matches if row[1] == match[1]), None)
+            
+                    if match_num:
+                        # 如果找到匹配的行，更新这一行
+                        index = self.port_matches.index(match_num)
+                        self.port_matches[index] = list(match)
+                    else:
+                        # 如果没有找到匹配的行，添加 matches 作为新的一行
+                        self.port_matches.append(list(match))
+
+                    # 创建要添加到下拉框的文本
+                    port_text = f"{match[0]}   Activated: {match[2]}"
+                    port_name = f"{match[0]}"
+                    # 检查下拉框中是否已存在该端口
+                    for i in range(self.port_combobox.count()):
+                        item = self.port_combobox.itemText(i)
+                        if port_name in item:  # 如果 port_name 部分匹配
+                            self.port_combobox.setItemText(i, port_text)  # 更新已存在的项
+                            break
+                    else:
+                        # 如果没有找到匹配项，才添加新项
+                        self.port_combobox.addItem(port_text)
+                    if 0 <= self.selected_port < len(self.port_matches):
+                        if self.port_matches[self.selected_port][2] == str("True") :
+                            self.is_activated = True
+                        elif self.port_matches[self.selected_port][2] == str("False"): 
+                            self.is_activated = False
+                    self.arm_combobox.setEnabled(self.is_found and self.is_activated)
+                    self.button_enable.setEnabled(self.is_found and self.is_activated)
+                    self.button_disable.setEnabled(self.is_found and self.is_activated)
+                    self.button_reset.setEnabled(self.is_found and self.is_activated)
+                    self.button_go_zero.setEnabled(self.is_found and self.is_activated)
+                    self.button_gripper_zero.setEnabled(self.is_found and self.is_activated)
+                    self.button_config_init.setEnabled(self.is_found and self.is_activated)
+                    self.slider.setEnabled(self.is_found and self.is_activated)
+                    self.gripper_combobox.setEnabled(self.is_found and self.is_activated)
+                    self.button_confirm.setEnabled(self.is_found and self.is_activated)
+                    self.button_read_confirm.setEnabled(self.is_found and self.is_activated)
+                    self.installpos_combobox.setEnabled(self.is_found and self.is_activated)
+                    self.button_installpos_confirm.setEnabled(self.is_found and self.is_activated)
+                    self.button_read_acc_limit.setEnabled(self.is_found and self.is_activated)
+                    self.read_combobox.setEnabled(self.is_found and self.is_activated and self.start_button_pressed_select)
+                    self.button_hardware.setEnabled(self.is_found and self.is_activated)
+                    self.button_gripper_clear_err.setEnabled(self.is_found and self.is_activated)
+                    self.name_edit.setEnabled(self.is_activated)
+
+
+            port_num = len(self.port_matches)
+            self.text_edit.append(f"Found {port_num} ports\n")
+
+        self.process.readyReadStandardOutput.connect(updateprint)
         self.is_found = True
+        time.sleep(0.05)
 
         self.button_activatecan.setEnabled(self.is_found)
 
@@ -530,49 +641,114 @@ class MainWindow(QWidget):
         script_dir = os.path.dirname(os.path.realpath(__file__))
         script_path = os.path.join(script_dir, 'can_activate.sh')
         port_speed = 1000000
+
         if 0 <= self.selected_port < len(self.port_matches):
-            command = f"echo {self.password} | sudo -S bash {script_path} {self.port_matches[self.selected_port][0]} {port_speed} {self.port_matches[self.selected_port][1]}"
+            name_text = self.name_edit.toPlainText()
+            # print (port_name)
+            if name_text != self.port_matches[self.selected_port][0]:
+                port_match = list(self.port_matches[self.selected_port])  # 转为 list
+                port_match[0] = str(name_text) # 修改第一个元素
+                self.port_matches[self.selected_port] = tuple(port_match)  # 转回 tuple
+                port_text_local = f"{name_text}   Activated: {self.port_matches[self.selected_port][2]}"
+                self.port_combobox.setItemText(self.selected_port, port_text_local)
+            command = f"echo {self.password} | sudo -S bash {script_path} {name_text} {port_speed} {self.port_matches[self.selected_port][1]}"     
         else: 
             self.text_edit.append("[Error]: Please select a port again.")
             return
         # command = f"echo {password} | sudo -S bash {script_path} {'can1'} {1000000} {'3-1.4.4.1:1.0'}"
         # self.text_edit.append(f"Running command: {command}")
         self.process = QProcess(self)
-        self.process.start('bash', ['-c', command]) 
+        self.process.start('bash', ['-c', command])
+        time.sleep(0.1)
         self.create_piper_interface(f"{self.port_matches[self.selected_port][0]}", False)
         # self.text_edit.append(f"Command has been run")
 
         self.process.readyReadStandardOutput.connect(self.handle_stdout)
-        self.is_activated = True
         self.readhardware()
 
         # 刷新关节使能状态
-        self.enable_status_thread = MyClass() # 线程初始化
-        self.enable_status_thread.start_reading_thread(self.display_enable_fun)  # 启动线程
-        self.enable_status_thread.worker.update_signal.connect(self.update_enable_status)
+        if self.enable_status_thread is None:
+            self.enable_status_thread = MyClass() # 线程初始化
+            self.enable_status_thread.start_reading_thread(self.display_enable_fun)  # 启动线程
+            self.enable_status_thread.worker.update_signal.connect(self.update_enable_status)
 
-        self.arm_combobox.setEnabled(self.is_found and self.is_activated)
-        self.button_enable.setEnabled(self.is_found and self.is_activated)
-        self.button_disable.setEnabled(self.is_found and self.is_activated)
-        self.button_reset.setEnabled(self.is_found and self.is_activated)
-        self.button_go_zero.setEnabled(self.is_found and self.is_activated)
-        self.button_gripper_zero.setEnabled(self.is_found and self.is_activated)
-        self.button_config_init.setEnabled(self.is_found and self.is_activated)
-        self.slider.setEnabled(self.is_found and self.is_activated)
-        self.gripper_combobox.setEnabled(self.is_found and self.is_activated)
-        self.button_confirm.setEnabled(self.is_found and self.is_activated)
-        self.button_read_confirm.setEnabled(self.is_found and self.is_activated)
-        self.installpos_combobox.setEnabled(self.is_found and self.is_activated)
-        self.button_installpos_confirm.setEnabled(self.is_found and self.is_activated)
-        self.button_read_acc_limit.setEnabled(self.is_found and self.is_activated)
-        self.read_combobox.setEnabled(self.is_found and self.is_activated and self.start_button_pressed_select)
-        self.button_hardware.setEnabled(self.is_found and self.is_activated)
-        self.button_gripper_clear_err.setEnabled(self.is_found and self.is_activated)
+        script_dir = os.path.dirname(os.path.realpath(__file__))
+        script_path = os.path.join(script_dir, 'find_all_can_port.sh')
+        self.process_find = QProcess(self)
+        command_find = f"echo {self.password} | sudo -S bash {script_path}"
+        self.process_find.start('bash', ['-c', command_find])   
+        self.process_find.finished.connect(self.on_process_find_finished)
+        def updateprint():
+            data = self.process_find.readAllStandardOutput().data().decode('utf-8')
+            self.text_edit.append(data)
+
+            # 正则表达式提取端口信息
+            matches = re.findall(r'接口名称:\s*(\w+)\s*端口号:\s*([\w.-]+:\d+\.\d+)\s*是否已激活:\s*(\S+)', data)
+            # if not matches in self.port_matches:
+            #     self.port_matches.extend(list(matches))
+
+            if matches:
+                for match in matches:
+                    # 显示端口信息
+                    self.text_edit.append(f"Port Name: {match[0]}  Port: {match[1]}  Activated: {match[2]}\n")
+
+                    match_num = next((row for row in self.port_matches if row[1] == match[1]), None)
+            
+                    if match_num:
+                        # 如果找到匹配的行，更新这一行
+                        index = self.port_matches.index(match_num)
+                        self.port_matches[index] = list(match)
+                    else:
+                        # 如果没有找到匹配的行，添加 matches 作为新的一行
+                        self.port_matches.append(list(match))
+
+                    # 创建要添加到下拉框的文本
+                    port_text = f"{match[0]}   Activated: {match[2]}"
+                    port_name = f"{match[0]}"
+                    # 检查下拉框中是否已存在该端口
+                    for i in range(self.port_combobox.count()):
+                        item = self.port_combobox.itemText(i)
+                        if port_name in item:  # 如果 port_name 部分匹配
+                            self.port_combobox.setItemText(i, port_text)  # 更新已存在的项
+                            break
+                    else:
+                        # 如果没有找到匹配项，才添加新项
+                        self.port_combobox.addItem(port_text)
+
+                    if 0 <= self.selected_port < len(self.port_matches):
+                        if self.port_matches[self.selected_port][2] == str("True") :
+                            self.is_activated = True
+                        elif self.port_matches[self.selected_port][2] == str("False"): 
+                            self.is_activated = False
+                    self.arm_combobox.setEnabled(self.is_found and self.is_activated)
+                    self.button_enable.setEnabled(self.is_found and self.is_activated)
+                    self.button_disable.setEnabled(self.is_found and self.is_activated)
+                    self.button_reset.setEnabled(self.is_found and self.is_activated)
+                    self.button_go_zero.setEnabled(self.is_found and self.is_activated)
+                    self.button_gripper_zero.setEnabled(self.is_found and self.is_activated)
+                    self.button_config_init.setEnabled(self.is_found and self.is_activated)
+                    self.slider.setEnabled(self.is_found and self.is_activated)
+                    self.gripper_combobox.setEnabled(self.is_found and self.is_activated)
+                    self.button_confirm.setEnabled(self.is_found and self.is_activated)
+                    self.button_read_confirm.setEnabled(self.is_found and self.is_activated)
+                    self.installpos_combobox.setEnabled(self.is_found and self.is_activated)
+                    self.button_installpos_confirm.setEnabled(self.is_found and self.is_activated)
+                    self.button_read_acc_limit.setEnabled(self.is_found and self.is_activated)
+                    self.read_combobox.setEnabled(self.is_found and self.is_activated and self.start_button_pressed_select)
+                    self.button_hardware.setEnabled(self.is_found and self.is_activated)
+                    self.button_gripper_clear_err.setEnabled(self.is_found and self.is_activated)
+                    self.name_edit.setEnabled(self.is_activated)
+
+
+        self.process_find.readyReadStandardOutput.connect(updateprint)
+        time.sleep(0.05)
 
     # 创建piper接口
     def create_piper_interface(self, port: str, is_virtual: bool) -> Optional[C_PiperInterface_V2]:
-        self.piper = C_PiperInterface_V2(port,is_virtual)
-        self.piper.ConnectPort()
+        if self.piper is None:
+            self.piper = C_PiperInterface_V2(port,is_virtual)
+            self.piper.ConnectPort()
+        
     
     def display_enable_fun(self):
         enable_list = []
@@ -779,6 +955,14 @@ class MainWindow(QWidget):
     
     def close(self):
         return super().close()
+    
+    def on_process_find_finished(self):
+        exit_code = self.process_find.exitCode()  # 获取进程的退出码
+        if exit_code == 0:
+            self.text_edit.append("[Info]: Process executed successfully.")
+        else:
+            self.text_edit.append(f"[Error]: Process failed with exit code {exit_code}.")
+
 
 def main():
     app = QApplication(sys.argv)  # 创建应用程序对象

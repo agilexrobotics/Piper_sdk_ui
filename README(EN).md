@@ -115,7 +115,8 @@ pui
 |Operation |Action|
 |---|---|
 |Find CAN Port button|Find the current CAN port, requires root password|
-|（can0 / can*）option|Select the robotic arm to operate based on the corresponding port|
+| (can0 / can*) options| Select the corresponding port to operate the robotic arm and display whether the port is activated. | 
+| CAN port rename input box | Enter or change the port name, apply after activation. |
 |Activate CAN Port button|Activate the port (after this, all subsequent functions can only be used after the port is activated)|
 |Enable button|Enable the robotic arm|
 |Disable button|Disable the robotic arm|

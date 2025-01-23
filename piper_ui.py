@@ -408,12 +408,22 @@ class MainWindow(QWidget):
         self.Teach_pendant_stroke = 100
 
         self.piper = None
+        self.already_warn = False
 
+    def can_warning(self):
+            # 创建警告消息框
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Warning)  # 设置消息框图标为警告
+        msg.setWindowTitle("Warnning")  # 设置消息框标题
+        msg.setText("No information for the CAN port.")  # 设置提示框的内容
+        msg.setStandardButtons(QMessageBox.Ok)  # 设置标准按钮（“确定”按钮）
+        msg.exec_()  # 显示消息框
      
     # 读取硬件信息
     def readhardware(self):
-        time.sleep(0.1)
+        time.sleep(1)
         self.hardware_edit.setText(f"Hardware version\n{self.piper.GetPiperFirmwareVersion()}")
+
     def show_warning(self):
             # 创建警告消息框
         msg = QMessageBox()
@@ -422,6 +432,7 @@ class MainWindow(QWidget):
         msg.setText("Invalid port selected, please re-find the CAN port.")  # 设置提示框的内容
         msg.setStandardButtons(QMessageBox.Ok)  # 设置标准按钮（“确定”按钮）
         msg.exec_()  # 显示消息框
+
     # 端口选择后的处理
     def on_port_combobox_select(self):
         if not hasattr(self, 'selected_port'):  # Check if 'selected_port' is already set
@@ -665,7 +676,7 @@ class MainWindow(QWidget):
 
         self.process.readyReadStandardOutput.connect(self.handle_stdout)
         self.readhardware()
-
+        self.already_warn = False
         # 刷新关节使能状态
         if self.enable_status_thread is None:
             self.enable_status_thread = MyClass() # 线程初始化
@@ -765,6 +776,14 @@ class MainWindow(QWidget):
             self.is_enable = False
             self.gripper_slider.setEnabled(self.is_enable)
         data = "".join(map(str, enable_list))
+
+        if not self.piper.isOk():
+            if self.already_warn == False:
+                self.can_warning()
+                self.already_warn = True
+        else :
+            time.sleep(1)
+
         return data
  
     # 机械臂使能

@@ -455,6 +455,12 @@ class MainWindow(QWidget):
             # print(self.port_matches[0][2])
             if self.port_matches[self.selected_port][2] == str(True):
                 self.is_activated = True
+                self.create_piper_interface(f"{self.port_matches[self.selected_port][0]}", False)
+                self.readhardware()
+            if self.enable_status_thread is None:
+                self.enable_status_thread = MyClass() # 线程初始化
+                self.enable_status_thread.start_reading_thread(self.display_enable_fun)  # 启动线程
+                self.enable_status_thread.worker.update_signal.connect(self.update_enable_status)
             elif self.port_matches[self.selected_port][2] == str(False): 
                 self.is_activated = False
         else :
@@ -682,7 +688,6 @@ class MainWindow(QWidget):
             self.enable_status_thread = MyClass() # 线程初始化
             self.enable_status_thread.start_reading_thread(self.display_enable_fun)  # 启动线程
             self.enable_status_thread.worker.update_signal.connect(self.update_enable_status)
-
         script_dir = os.path.dirname(os.path.realpath(__file__))
         script_path = os.path.join(script_dir, 'find_all_can_port.sh')
         self.process_find = QProcess(self)

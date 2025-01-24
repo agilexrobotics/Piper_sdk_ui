@@ -568,7 +568,6 @@ class MainWindow(QWidget):
             self.password = self.prompt_for_password()
             if not self.password:
                 return
-
         self.port_combobox.clear()  # 清空下拉框中的旧数据
 
         script_dir = os.path.dirname(os.path.realpath(__file__))
@@ -636,7 +635,9 @@ class MainWindow(QWidget):
                     self.button_gripper_clear_err.setEnabled(self.is_found and self.is_activated)
                     self.name_edit.setEnabled(self.is_activated)
 
-
+            for row in self.port_matches:
+                if len(row) > 0:  # 确保行不为空
+                    self.piper_interface_flag[f"{row[0]}"] = False
             port_num = len(self.port_matches)
             self.text_edit.append(f"Found {port_num} ports\n")
 

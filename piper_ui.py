@@ -409,6 +409,7 @@ class MainWindow(QWidget):
 
         self.piper = None
         self.already_warn = False
+        self.piper_interface_flag = {}
 
     def can_warning(self):
             # 创建警告消息框
@@ -435,14 +436,17 @@ class MainWindow(QWidget):
 
     # 端口选择后的处理
     def on_port_combobox_select(self):
-        if not hasattr(self, 'selected_port'):  # Check if 'selected_port' is already set
+        if not self.selected_port:  # Check if 'selected_port' is already set
             self.selected_port = 0  # Set default value to the first item (index 0)
 
         current_index = self.port_combobox.currentIndex()
-    
+
+        self.piper_interface_flag[f"{self.port_matches[self.selected_port][0]}"] = False
         # 检查是否有有效的选择（索引 >= 0）
         if current_index >= 0:
             self.selected_port = current_index  # 更新为有效的选择
+            # self.piper.DisconnectPort()
+            self.create_piper_interface(f"{self.port_matches[self.selected_port][0]}", False)
             self.text_edit.append(f"Selected Port: can{self.selected_port}")
         else:
             # 如果没有有效选择，可以处理该情况
@@ -455,7 +459,6 @@ class MainWindow(QWidget):
             # print(self.port_matches[0][2])
             if self.port_matches[self.selected_port][2] == str(True):
                 self.is_activated = True
-                self.create_piper_interface(f"{self.port_matches[self.selected_port][0]}", False)
                 self.readhardware()
             if self.enable_status_thread is None:
                 self.enable_status_thread = MyClass() # 线程初始化
@@ -676,7 +679,8 @@ class MainWindow(QWidget):
         # self.text_edit.append(f"Running command: {command}")
         self.process = QProcess(self)
         self.process.start('bash', ['-c', command])
-        time.sleep(0.1)
+        time.sleep(0.05)
+        # self.piper.DisconnectPort()
         self.create_piper_interface(f"{self.port_matches[self.selected_port][0]}", False)
         # self.text_edit.append(f"Command has been run")
 
@@ -761,9 +765,10 @@ class MainWindow(QWidget):
 
     # 创建piper接口
     def create_piper_interface(self, port: str, is_virtual: bool) -> Optional[C_PiperInterface_V2]:
-        if self.piper is None:
+        if self.piper_interface_flag.get(port) is False:
             self.piper = C_PiperInterface_V2(port,is_virtual)
             self.piper.ConnectPort()
+            self.piper_interface_flag[port] = True
         
     
     def display_enable_fun(self):
@@ -786,8 +791,6 @@ class MainWindow(QWidget):
             if self.already_warn == False:
                 self.can_warning()
                 self.already_warn = True
-        else :
-            time.sleep(1)
 
         return data
  

@@ -77,18 +77,12 @@ class MyClass(QObject):
         self.thread.started.connect(self.worker.run)  # 线程启动时执行 run 方法
         self.worker.finished.connect(self.thread.quit)  # 任务完成时退出线程
         self.worker.finished.connect(self.worker.deleteLater)  # 删除工作者对象
-        # print(f"更新 GUI：{data}")
-        # 这里可以添加具体的 GUI 更新逻辑，例如更新 QLabel、QTextEdit 等。
+        self.thread.finished.connect(self.thread.deleteLater)  # 删除线程对象
 
-    def stop_reading_thread(self):
-        """停止线程"""
-        if self.thread and self.thread.isRunning():
-            self.stop_event.set()  # 通知线程停止
-            self.thread.quit()  # 请求线程退出
-            self.thread.wait()  # 等待线程完成
-            print("线程已停止")
-        else:
-            print("线程未运行，无需停止")       # 启动线程
+        # 将子线程数据更新信号连接到主线程槽
+        self.worker.update_signal.connect(self.update_gui)
+
+        # 启动线程
         self.stop_event.clear()  # 清除停止标志
         self.thread.start()
 

@@ -1,4 +1,18 @@
-[EN](README(EN).md)
+[中文](README.MD)
+
+|Ubuntu |STATE|
+|---|---|
+|![ubuntu18.04](https://img.shields.io/badge/Ubuntu-18.04-orange.svg)|![Pass](https://img.shields.io/badge/Pass-blue.svg)|
+|![ubuntu20.04](https://img.shields.io/badge/Ubuntu-20.04-orange.svg)|![Pass](https://img.shields.io/badge/Pass-blue.svg)|
+|![ubuntu22.04](https://img.shields.io/badge/Ubuntu-22.04-orange.svg)|![Pass](https://img.shields.io/badge/Pass-blue.svg)|
+
+Test:
+
+|PYTHON |STATE|
+|---|---|
+|![python3.6](https://img.shields.io/badge/Python-3.6-blue.svg)|![Pass](https://img.shields.io/badge/Pass-blue.svg)|
+|![python3.8](https://img.shields.io/badge/Python-3.8-blue.svg)|![Pass](https://img.shields.io/badge/Pass-blue.svg)|
+|![python3.10](https://img.shields.io/badge/Python-3.10-blue.svg)|![Pass](https://img.shields.io/badge/Pass-blue.svg)|
 
 ## 1 Installation Method
 
@@ -31,10 +45,11 @@ View the details of piper_sdk, such as installation path, version, etc.
 ```shell
 pip3 show piper_sdk
 ```
+Ensure that the SDK version is 0.1.9.
 
 0.0.x is the sdk version supported before the robotic arm V1.5-2 firmware.
 
-The last version number of 0.0.x is 0.0.9.
+The last version number of 0.0.x is 0.1.9.
 
 To uninstall
 

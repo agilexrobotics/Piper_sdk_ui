@@ -1,4 +1,18 @@
-[CN](README(CN).md)
+[EN](README(EN).md)
+
+|Ubuntu |STATE|
+|---|---|
+|![ubuntu18.04](https://img.shields.io/badge/Ubuntu-18.04-orange.svg)|![Pass](https://img.shields.io/badge/Pass-blue.svg)|
+|![ubuntu20.04](https://img.shields.io/badge/Ubuntu-20.04-orange.svg)|![Pass](https://img.shields.io/badge/Pass-blue.svg)|
+|![ubuntu22.04](https://img.shields.io/badge/Ubuntu-22.04-orange.svg)|![Pass](https://img.shields.io/badge/Pass-blue.svg)|
+
+Test:
+
+|PYTHON |STATE|
+|---|---|
+|![python3.6](https://img.shields.io/badge/Python-3.6-blue.svg)|![Pass](https://img.shields.io/badge/Pass-blue.svg)|
+|![python3.8](https://img.shields.io/badge/Python-3.8-blue.svg)|![Pass](https://img.shields.io/badge/Pass-blue.svg)|
+|![python3.10](https://img.shields.io/badge/Python-3.10-blue.svg)|![Pass](https://img.shields.io/badge/Pass-blue.svg)|
 
 ## 1 安装方法
 
@@ -32,9 +46,11 @@ pip3 install piper_sdk
 pip3 show piper_sdk
 ```
 
+确保sdk版本为0.1.9
+
 0.0.x 为机械臂V1.5-2固件版本前的sdk支持
 
-当前0.0.x最后一个版本号为0.0.9
+当前0.0.x最后一个版本号为0.1.9
 
 若要卸载
 

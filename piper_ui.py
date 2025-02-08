@@ -9,7 +9,8 @@ from PyQt5.QtGui import QPixmap, QTextCursor
 from PyQt5.QtCore import Qt, QProcess
 
 from piper_sdk import C_PiperInterface_V2  
-from thread_module import MyClass  
+from thread_module import MyClass 
+from WidgetCreator import WidgetCreator
 
 class MainWindow(QWidget):
     def __init__(self):
@@ -51,6 +52,9 @@ class MainWindow(QWidget):
         self.layout = QGridLayout(self)
         self.text_edit = QTextEdit()  # 用于打印终端信息
 
+        # 实例化控件创建
+        self.widget_creator = WidgetCreator()
+
         # 创建各部分控件
         self.create_can_port_widgets()
         self.create_arm_selection_widgets()
@@ -78,23 +82,22 @@ class MainWindow(QWidget):
         self.layout.addWidget(self.button_config_init, 1, 4)
 
         # 第三行：添加夹爪示教器参数设置框和信息读取框
-        self.layout.addWidget(self.gripper_teaching_frame, 2, 0, 3, 3)
-        self.layout.addWidget(self.read_frame, 2, 3, 3, 4)
+        self.layout.addWidget(self.gripper_teaching_frame, 2, 0, 5, 3)
+        self.layout.addWidget(self.read_frame, 2, 3, 5, 5)
 
-        # 右上角添加 Logo 和硬件版本显示、can帧率显示
+        # 右上角添加 Logo 和硬件版本显示、can帧率显示、关节使能状态显示
         col = self.layout.columnCount()
         self.layout.addWidget(self.label, 0, col)
         self.layout.addWidget(self.hardware_edit, 1, col)
         self.layout.addWidget(self.button_hardware, 2, col)
-        self.layout.addWidget(self.can_fps_frame, 3, col)
+        self.layout.addWidget(self.enable_status_edit_frame, 3, col-2, 4, col-2)
 
-        # 底部添加取消、退出按钮及关节使能状态显示、终端信息打印窗口
-        self.layout.addWidget(self.button_cancel, self.layout.rowCount()-1, col)
-        self.layout.addWidget(self.enable_status_edit_lable, self.layout.rowCount(), 0)
-        self.layout.addWidget(self.enable_status_edit, self.layout.rowCount()-1, 1)
-        self.layout.addWidget(self.button_close, self.layout.rowCount()-1, col)
-        self.layout.addWidget(self.text_edit, self.layout.rowCount(), 0, self.layout.rowCount(), round(self.layout.columnCount()/2)-1)
-        self.layout.addWidget(self.message_edit, self.layout.rowCount()-6, round(self.layout.columnCount()/2)-1, self.layout.rowCount()-6, self.layout.columnCount())
+        # 底部添加取消、退出按钮及终端信息打印窗口
+        downrow=self.layout.rowCount()
+        self.layout.addWidget(self.button_cancel, downrow+5, col)
+        self.layout.addWidget(self.button_close, downrow+6, col)
+        self.layout.addWidget(self.text_edit, downrow, 0, downrow, round(col/2)-1)
+        self.layout.addWidget(self.message_edit, downrow, round(col/2)-1, downrow, col-3)
 
     def init_connections(self):
         # 连接各控件信号和对应槽函数
@@ -118,207 +121,159 @@ class MainWindow(QWidget):
         self.port_combobox.currentIndexChanged.connect(self.on_port_combobox_select)
         self.button_cancel.clicked.connect(self.cancel_process)
         self.button_close.clicked.connect(self.close)
+        self.gripper_slider.valueChanged.connect(self.update_gripper)
 
     # ==============================
     # 创建各部分控件的函数
     # ==============================
     def create_can_port_widgets(self):
         # 查找 CAN 端口相关控件
-        self.button_findcan = QPushButton('Find CAN Port')
-        self.button_findcan.setFixedSize(150, 40)
-        self.port_combobox = QComboBox(self)
-        self.port_combobox.setFixedSize(200, 40)
-        self.name_edit = QTextEdit()
-        self.name_edit.setFixedSize(100, 40)
-        self.name_edit.setEnabled(self.is_activated)
-        self.button_activatecan = QPushButton('Activate CAN Port')
-        self.button_activatecan.setFixedSize(150, 40)
-        self.button_activatecan.setEnabled(self.is_found)
+        self.button_findcan = self.widget_creator.create_button('Find CAN Port')
+        self.port_combobox = self.widget_creator.create_combo_box(size=(150, 40))
+        self.name_edit = self.widget_creator.create_text_edit(size=(150, 40))
+        self.button_activatecan = self.widget_creator.create_button('Activate CAN Port', enabled=self.is_found)
 
     def create_arm_selection_widgets(self):
         # 主/从臂选择下拉框
-        self.arm_combobox = QComboBox(self)
-        self.arm_combobox.setFixedSize(200, 40)
-        self.arm_combobox.addItem("Slave")
-        self.arm_combobox.addItem("Master")
-        self.arm_combobox.setEnabled(self.is_found and self.is_activated)
+        self.arm_combobox = self.widget_creator.create_combo_box(
+        items=["Slave", "Master"], 
+        size=(150, 40),
+        enabled=self.is_found and self.is_activated
+        )
 
     def create_activation_widgets(self):
         # 机械臂操作相关按钮：使能、失能、重置、到零点、夹爪归零、参数初始化
-        self.button_enable = QPushButton('Enable')
-        self.button_enable.setFixedSize(150, 40)
-        self.button_enable.setEnabled(self.is_found and self.is_activated)
-        self.button_disable = QPushButton('Disable')
-        self.button_disable.setFixedSize(150, 40)
-        self.button_disable.setEnabled(self.is_found and self.is_activated)
-        self.button_reset = QPushButton('Reset')
-        self.button_reset.setFixedSize(150, 40)
-        self.button_reset.setEnabled(self.is_found and self.is_activated)
-        self.button_go_zero = QPushButton('Go Zero')
-        self.button_go_zero.setFixedSize(150, 40)
-        self.button_go_zero.setEnabled(self.is_found and self.is_activated)
-        self.button_gripper_zero = QPushButton('Gripper Zero')
-        self.button_gripper_zero.setFixedSize(150, 40)
-        self.button_gripper_zero.setEnabled(self.is_found and self.is_activated)
-        self.button_config_init = QPushButton('Config Init')
-        self.button_config_init.setFixedSize(150, 40)
-        self.button_config_init.setEnabled(self.is_found and self.is_activated)
+        self.button_enable = self.widget_creator.create_button(text="Enable", enabled=self.is_found and self.is_activated)
+        self.button_disable = self.widget_creator.create_button(text="Disable", enabled=self.is_found and self.is_activated)
+        self.button_reset = self.widget_creator.create_button(text="Reset", enabled=self.is_found and self.is_activated)
+        self.button_go_zero = self.widget_creator.create_button(text="Go Zero", enabled=self.is_found and self.is_activated)
+        self.button_gripper_zero = self.widget_creator.create_button(text="Gripper Zero", enabled=self.is_found and self.is_activated)
+        self.button_config_init = self.widget_creator.create_button(text="Config Init", enabled=self.is_found and self.is_activated)
 
     def create_gripper_teaching_widgets(self):
         # 夹爪及示教器参数设置框
-        self.gripper_teaching_frame = QFrame()
-        self.gripper_teaching_frame.setFrameShape(QFrame.Box)
-        self.gripper_teaching_frame.setLineWidth(1)
-        self.gripper_teaching_layout = QGridLayout(self.gripper_teaching_frame)
+        self.gripper_teaching_frame = self.widget_creator.create_frame(frame_shape=QFrame.Box,line_width=1)
+
         # 示教器行程滑块、标签及显示框
-        self.slider_label = QLabel('Teach pendant stroke')
-        self.slider = QSlider()
-        self.slider.setOrientation(Qt.Horizontal)
-        self.slider.setRange(100, 200)
-        self.slider.setValue(100)
-        self.slider.setEnabled(self.is_found and self.is_activated)
-        self.slider_text_edit = QTextEdit()
-        self.slider_text_edit.setReadOnly(True)
-        self.slider_text_edit.setFixedSize(60, 30)
-        self.gripper_teaching_layout.addWidget(self.slider_label, 0, 0)
-        self.gripper_teaching_layout.addWidget(self.slider, 1, 0)
-        self.gripper_teaching_layout.addWidget(self.slider_text_edit, 1, 1)
+        self.slider_label = self.widget_creator.create_label("Teach pendant stroke", size=(150, 15))
+        self.slider = self.widget_creator.create_slider(min_value=100, max_value=200, value=100, orientation='horizontal', enabled=self.is_found and self.is_activated)
+        self.slider_text_edit = self.widget_creator.create_text_edit(size=(60, 30), read_only=True)
+
         # 夹爪行程下拉框
-        self.gripper_combobox_label = QLabel('Gripper stroke')
-        self.gripper_combobox = QComboBox(self)
-        self.gripper_combobox.setFixedSize(200, 40)
-        self.gripper_combobox.addItems(["70", "0", "100"])
-        self.gripper_combobox.setEnabled(self.is_found and self.is_activated)
-        self.button_confirm = QPushButton('Confirm')
-        self.button_confirm.setFixedSize(80, 40)
-        self.button_confirm.setEnabled(self.is_found and self.is_activated)
-        self.gripper_teaching_layout.addWidget(self.gripper_combobox_label, 2, 0)
-        self.gripper_teaching_layout.addWidget(self.gripper_combobox, 3, 0)
-        self.gripper_teaching_layout.addWidget(self.button_confirm, 3, 1)
+        self.gripper_combobox_label = self.widget_creator.create_label("Gripper stroke", size=(150, 15))
+        self.gripper_combobox = self.widget_creator.create_combo_box(items=["70", "0", "100"], size=(60, 30), enabled=self.is_found and self.is_activated)
+        self.button_confirm = self.widget_creator.create_button(text="Confirm", size=(80, 40), enabled=self.is_found and self.is_activated)
+
         # 夹爪清错按钮
-        self.button_gripper_clear_err = QPushButton('Gripper\ndisable\nand\nclear err')
-        self.button_gripper_clear_err.setFixedSize(60, 80)
-        self.button_gripper_clear_err.setEnabled(self.is_found and self.is_activated)
-        self.gripper_teaching_layout.addWidget(self.button_gripper_clear_err, 1, 2, 5, 2)
+        self.button_gripper_clear_err = self.widget_creator.create_button(text="Gripper\ndisable\nand\nclear err", size=(60, 80), enabled=self.is_found and self.is_activated)
+
         # 夹爪控制滑块
-        self.gripper_slider_lable = QLabel('Gripper control')
-        self.gripper_slider = QSlider()
-        self.gripper_slider.setOrientation(Qt.Horizontal)
-        self.gripper_slider.setRange(0, 70)
-        self.gripper_slider.setValue(0)
-        self.gripper_slider.setEnabled(self.is_enable)
-        self.gripper_slider_edit = QTextEdit()
-        self.gripper_slider_edit.setReadOnly(True)
-        self.gripper_slider_edit.setFixedSize(60, 30)
-        self.gripper_slider.valueChanged.connect(self.update_gripper)
-        self.gripper_teaching_layout.addWidget(self.gripper_slider_lable, 4, 0)
-        self.gripper_teaching_layout.addWidget(self.gripper_slider, 5, 0)
-        self.gripper_teaching_layout.addWidget(self.gripper_slider_edit, 5, 1)
+        self.gripper_slider_label = self.widget_creator.create_label("Gripper control", size=(150, 15))
+        self.gripper_slider = self.widget_creator.create_slider(min_value=0, max_value=70, value=0, orientation='horizontal', enabled=self.is_enable)
+        self.gripper_slider_edit = self.widget_creator.create_text_edit(size=(60, 30), read_only=True)
+
+        gripper_teaching_layout = [
+            (self.slider_label, 0, 0),
+            (self.slider, 1, 0),
+            (self.slider_text_edit, 1, 1),
+            (self.gripper_combobox_label, 2, 0),
+            (self.gripper_combobox, 3, 0),
+            (self.button_confirm, 3, 1),
+            (self.button_gripper_clear_err, 1, 2, 5, 3),
+            (self.gripper_slider_label, 4, 0),
+            (self.gripper_slider, 5, 0),
+            (self.gripper_slider_edit, 5, 1)
+        ]
+        self.widget_creator.add_layout_to_frame(self.gripper_teaching_frame, gripper_teaching_layout)
 
     def create_hardware_widgets(self):
         # 硬件版本显示相关控件
-        self.button_hardware = QPushButton("hardware version")
-        self.button_hardware.setFixedSize(150, 40)
-        self.button_hardware.setEnabled(self.is_found and self.is_activated)
-        self.hardware_edit = QTextEdit()
-        self.hardware_edit.setReadOnly(True)
-        self.hardware_edit.setFixedSize(150, 40)
+        self.button_hardware = self.widget_creator.create_button("hardware version", size=(150, 40), enabled=self.is_found and self.is_activated)
+        self.hardware_edit = self.widget_creator.create_text_edit(size=(150, 40), enabled=True, read_only=True)
 
     def create_read_info_widgets(self):
         # 信息读取区域
-        self.read_frame = QFrame()
-        self.read_frame.setFrameShape(QFrame.Box)
-        self.read_frame.setLineWidth(1)
-        self.read_layout = QGridLayout(self.read_frame)
-        self.Status_information_reading_label = QLabel('Status information reading')
-        self.button_read_acc_limit = QPushButton('Max Acc Limit')
-        self.button_read_acc_limit.setFixedSize(120, 40)
-        self.button_read_acc_limit.setEnabled(self.is_found and self.is_activated)
-        self.read_combobox = QComboBox(self)
-        self.read_combobox.setFixedSize(200, 40)
-        self.read_combobox.addItems(["Angle Speed Limit", "joint Status", "Gripper Status", "Piper Status"])
-        self.read_combobox.setEnabled(self.is_found and self.is_activated and self.start_button_pressed_select)
-        self.button_read_confirm = QPushButton('Start')
-        self.button_read_confirm.setFixedSize(80, 40)
-        self.button_read_confirm.setEnabled(self.is_found and self.is_activated)
-        self.button_stop_print = QPushButton('Stop')
-        self.button_stop_print.setFixedSize(80, 40)
-        self.button_stop_print.setEnabled(self.is_found and self.is_activated and self.start_button_pressed)
-        self.installpos_combobox_lable = QLabel('Installation position')
-        self.installpos_combobox = QComboBox(self)
-        self.installpos_combobox.setFixedSize(200, 40)
-        self.installpos_combobox.addItems(["Parallel", "Left", "Right"])
-        self.installpos_combobox.setEnabled(self.is_found and self.is_activated)
-        self.button_installpos_confirm = QPushButton('Confirm')
-        self.button_installpos_confirm.setFixedSize(80, 40)
-        self.button_installpos_confirm.setEnabled(self.is_found and self.is_activated)
-        # 将信息读取相关控件添加到布局中
-        self.read_layout.addWidget(self.Status_information_reading_label, 0, 0)
-        self.read_layout.addWidget(self.button_read_acc_limit, 0, 1)
-        self.read_layout.addWidget(self.read_combobox, 1, 0)
-        self.read_layout.addWidget(self.button_read_confirm, 1, 1)
-        self.read_layout.addWidget(self.button_stop_print, 1, 2)
-        self.read_layout.addWidget(self.installpos_combobox_lable, 2, 0)
-        self.read_layout.addWidget(self.installpos_combobox, 3, 0)
-        self.read_layout.addWidget(self.button_installpos_confirm, 3, 1)
+        self.read_frame = self.widget_creator.create_frame(frame_shape=QFrame.Box, line_width=1)
+        self.Status_information_reading_label = self.widget_creator.create_label('Status information reading',size=(150,40))
+        self.button_read_acc_limit = self.widget_creator.create_button('Max Acc Limit', size=(120, 40), enabled=self.is_found and self.is_activated)
+        self.read_combobox = self.widget_creator.create_combo_box(
+            items=["Angle Speed Limit", "joint Status", "Gripper Status", "Piper Status"],
+            size=(150, 40),
+            enabled=self.is_found and self.is_activated and self.start_button_pressed_select
+        )
+        self.button_read_confirm = self.widget_creator.create_button('Start', size=(80, 40), enabled=self.is_found and self.is_activated)
+        self.button_stop_print = self.widget_creator.create_button('Stop', size=(80, 40), enabled=self.is_found and self.is_activated and self.start_button_pressed)
+
+        self.installpos_combobox_lable = self.widget_creator.create_label('Installation position',size=(120,40))
+
+        self.installpos_combobox = self.widget_creator.create_combo_box(
+            items=["Parallel", "Left", "Right"],
+            size=(150, 40),
+            enabled=self.is_found and self.is_activated
+        )
+        self.button_installpos_confirm = self.widget_creator.create_button('Confirm', size=(80, 40), enabled=self.is_found and self.is_activated)
+        # 创建 QTextEdit
         self.message_edit = QTextEdit()
-        self.message_edit.setReadOnly(True)
+        # 将信息读取相关控件添加到布局中
+        read_layout = [
+            (self.Status_information_reading_label, 0, 0 ),
+            (self.button_read_acc_limit, 0, 1 ),
+            (self.read_combobox, 1, 0 ),
+            (self.button_read_confirm, 1, 1 ),
+            (self.button_stop_print, 1, 2 ),
+            (self.installpos_combobox_lable, 2, 0 ),
+            (self.installpos_combobox, 3, 0 ),
+            (self.button_installpos_confirm, 3, 1)
+            ]
+        self.widget_creator.add_layout_to_frame(self.read_frame, read_layout)
 
     def create_extra_widgets(self):
         # 关节使能状态显示 can帧率显示及取消、退出按钮
-        self.enable_status_edit_lable = QLabel('Joint enable status(0->disable, 1->enable)')
-        self.enable_status_edit = QTextEdit()
-        self.enable_status_edit.setReadOnly(True)
-        self.enable_status_edit.setFixedSize(70, 30)
-        self.can_fps_edit_lable = QLabel('Can port fps')
-        self.can_fps_edit = QTextEdit()
-        self.can_fps_edit.setReadOnly(True)
-        self.can_fps_edit.setFixedSize(60, 30)
-        self.can_fps_frame = QFrame()
-        self.can_fps_frame.setFrameShape(QFrame.Box)
-        self.can_fps_frame.setLineWidth(0)
-        self.can_fps_layout = QGridLayout(self.can_fps_frame)
-        self.can_fps_layout.addWidget(self.can_fps_edit_lable, 0, 0)
-        self.can_fps_layout.addWidget(self.can_fps_edit, 0, 1)
-        self.button_cancel = QPushButton('Cancel')
-        self.button_cancel.setFixedSize(150, 40)
-        self.button_close = QPushButton('Exit')
-        self.button_close.setFixedSize(150, 40)
+        self.enable_status_edit_lable = self.widget_creator.create_label('Enable flag', size=(150, 20))
+        self.enable_status_edit = self.widget_creator.create_text_edit(size=(90, 30), enabled=True, read_only=True)
+        self.can_fps_edit_lable = self.widget_creator.create_label('Can fps', size=(150, 20))
+        self.can_fps_edit = self.widget_creator.create_text_edit(size=(90, 30), enabled=True, read_only=True)
+        self.enable_status_edit_frame = self.widget_creator.create_frame(line_width=0)
+        enable_status_edit_layout = [(self.enable_status_edit_lable, 0, 0),(self.enable_status_edit, 1, 0),
+                                     (self.can_fps_edit_lable, 2, 0),(self.can_fps_edit, 3, 0)]
+        self.widget_creator.add_layout_to_frame(self.enable_status_edit_frame,enable_status_edit_layout)
+        self.button_cancel = self.widget_creator.create_button('Cancel', size=(150, 40), enabled=True)
+        self.button_close = self.widget_creator.create_button('Exit', size=(150, 40), enabled=True)
 
     def create_logo(self):
         # 添加 Logo 图片
-        self.label = QLabel(self)
+        # 创建 QLabel 控件
+        self.label = self.widget_creator.create_label('', size=(150, 40))
         main_dir = os.path.dirname(os.path.abspath(__file__))
         image_path = os.path.join(main_dir, 'logo-white.png')
         pixmap = QPixmap(image_path)
-        pixmap = pixmap.scaled(150, 40, Qt.KeepAspectRatio)
+        pixmap = pixmap.scaled(150, 40, Qt.KeepAspectRatio)  # 调整图片大小
         self.label.setPixmap(pixmap)
-        self.label.resize(150, 40)
         self.label.setStyleSheet("background-color: black;")
 
     # ==============================
     # 集中更新界面状态的方法
     # ==============================
     def update_ui_states(self):
-        base_state = self.is_found and self.is_activated
-        self.arm_combobox.setEnabled(base_state)
-        self.button_enable.setEnabled(base_state and not self.master_flag)
-        self.button_disable.setEnabled(base_state and not self.master_flag)
-        self.button_reset.setEnabled(base_state and not self.master_flag)
-        self.button_go_zero.setEnabled(base_state and not self.master_flag)
-        self.button_gripper_zero.setEnabled(base_state and not self.master_flag)
-        self.button_config_init.setEnabled(base_state and not self.master_flag)
-        self.slider.setEnabled(base_state and not self.master_flag)
-        self.gripper_combobox.setEnabled(base_state and not self.master_flag)
-        self.button_confirm.setEnabled(base_state and not self.master_flag)
-        self.installpos_combobox.setEnabled(base_state and not self.master_flag)
-        self.button_installpos_confirm.setEnabled(base_state and not self.master_flag)
-        self.button_read_acc_limit.setEnabled(base_state)
-        self.read_combobox.setEnabled(base_state and self.start_button_pressed_select)
-        self.button_hardware.setEnabled(base_state)
-        self.button_gripper_clear_err.setEnabled(base_state)
+        self.base_state = self.is_found and self.is_activated
+        self.arm_combobox.setEnabled(self.base_state)
+        self.button_enable.setEnabled(self.base_state and not self.master_flag)
+        self.button_disable.setEnabled(self.base_state and not self.master_flag)
+        self.button_reset.setEnabled(self.base_state and not self.master_flag)
+        self.button_go_zero.setEnabled(self.base_state and not self.master_flag)
+        self.button_gripper_zero.setEnabled(self.base_state and not self.master_flag)
+        self.button_config_init.setEnabled(self.base_state and not self.master_flag)
+        self.slider.setEnabled(self.base_state and not self.master_flag)
+        self.gripper_combobox.setEnabled(self.base_state and not self.master_flag)
+        self.button_confirm.setEnabled(self.base_state and not self.master_flag)
+        self.installpos_combobox.setEnabled(self.base_state and not self.master_flag)
+        self.button_installpos_confirm.setEnabled(self.base_state and not self.master_flag)
+        self.button_read_acc_limit.setEnabled(self.base_state)
+        self.read_combobox.setEnabled(self.base_state and self.start_button_pressed_select)
+        self.button_hardware.setEnabled(self.base_state)
+        self.button_gripper_clear_err.setEnabled(self.base_state)
         self.name_edit.setEnabled(self.is_activated)
-        self.button_read_confirm.setEnabled(base_state)
+        self.button_read_confirm.setEnabled(self.base_state)
         
     # ==============================
     # 以下为各功能模块的槽函数和业务逻辑
@@ -698,18 +653,19 @@ class MainWindow(QWidget):
         self.master_slave_config()
 
     def update_ui_states_master(self):
-        self.button_enable.setEnabled(self.is_found and self.is_activated and not self.master_flag)
-        self.button_disable.setEnabled(self.is_found and self.is_activated and not self.master_flag)
-        self.button_go_zero.setEnabled(self.is_found and self.is_activated and not self.master_flag)
-        self.button_gripper_zero.setEnabled(self.is_found and self.is_activated and not self.master_flag)
-        self.button_config_init.setEnabled(self.is_found and self.is_activated and not self.master_flag)
-        self.slider.setEnabled(self.is_found and self.is_activated and not self.master_flag)
-        self.gripper_combobox.setEnabled(self.is_found and self.is_activated and not self.master_flag)
-        self.button_confirm.setEnabled(self.is_found and self.is_activated and not self.master_flag)
-        self.installpos_combobox.setEnabled(self.is_found and self.is_activated and not self.master_flag)
-        self.button_installpos_confirm.setEnabled(self.is_found and self.is_activated and not self.master_flag)
-        self.button_confirm.setEnabled(self.is_found and self.is_activated and not self.master_flag)
-        self.button_gripper_clear_err.setEnabled(self.is_found and self.is_activated and not self.master_flag)
+        self.base_state = self.is_found and self.is_activated
+        self.button_enable.setEnabled(self.base_state and not self.master_flag)
+        self.button_disable.setEnabled(self.base_state and not self.master_flag)
+        self.button_go_zero.setEnabled(self.base_state and not self.master_flag)
+        self.button_gripper_zero.setEnabled(self.base_state and not self.master_flag)
+        self.button_config_init.setEnabled(self.base_state and not self.master_flag)
+        self.slider.setEnabled(self.base_state and not self.master_flag)
+        self.gripper_combobox.setEnabled(self.base_state and not self.master_flag)
+        self.button_confirm.setEnabled(self.base_state and not self.master_flag)
+        self.installpos_combobox.setEnabled(self.base_state and not self.master_flag)
+        self.button_installpos_confirm.setEnabled(self.base_state and not self.master_flag)
+        self.button_confirm.setEnabled(self.base_state and not self.master_flag)
+        self.button_gripper_clear_err.setEnabled(self.base_state and not self.master_flag)
 
     def master_slave_config(self):
         

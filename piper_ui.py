@@ -471,7 +471,6 @@ class MainWindow(QWidget):
                 self.piper.DisconnectPort(True)
                 self.is_activated = False
                 self.update_ui_states()
-                self.run_findcan()
         # self.can_fps_edit.clear()
         can_fps = round(self.piper.GetCanFps())
         return data, can_fps

@@ -3,8 +3,7 @@ import sys
 import time
 import re
 from typing import Optional
-from PyQt5.QtWidgets import (QWidget, QApplication, QGridLayout, QTextEdit, QPushButton,
-                             QComboBox, QLabel, QFrame, QSlider, QMessageBox, QInputDialog, QLineEdit)
+from PyQt5.QtWidgets import (QWidget, QApplication, QGridLayout, QTextEdit, QFrame, QMessageBox, QInputDialog, QLineEdit)
 from PyQt5.QtGui import QPixmap, QTextCursor
 from PyQt5.QtCore import Qt, QProcess
 
@@ -30,7 +29,6 @@ class MainWindow(QWidget):
         self.selected_arm = None      # 主/从臂模式
         self.port_matches = []        # 存储查找到的端口信息，每个元素为 [端口名称, 端口号, 是否激活]
         self.piper = None             # piper 接口对象
-        self.already_warn = False     # 是否已弹出警告
         self.piper_interface_flag = {}# 每个端口对应的 piper 接口创建标志
         self.password = None          # 密码
         self.enable_status_thread = None  # 关节使能状态线程
@@ -38,7 +36,14 @@ class MainWindow(QWidget):
         self.start_button_pressed = False  # 信息读取开始标志
         self.start_button_pressed_select = True
         self.stop_button_pressed = False   # 信息读取停止标志
-        self.flag = None            # 主从切换确认标志
+        self.flag = None              # 主从切换确认标志
+        self.can_fps = 0              # can口的fps
+        self.limited_timers = {}  # 存储不同函数的定时器
+        self.last_update_enable_status_time = 0 # 记录更新使能状态和can断开警告触发时间
+        self.last_canwarning_time = 0 # 记录can断开警告触发时间
+        self.last_findcan_time = 0 # 记录查找can触发时间
+        self.first_activatecan = False # 记录第一次activate，防止第一次触发can_warning
+        self.warning_shown = False # warning是否已弹出
 
     def init_ui(self):
         self.setWindowTitle('Piper SDK Tools')
@@ -51,10 +56,8 @@ class MainWindow(QWidget):
                   (screen_geometry.height() - self.height()) // 2)
         self.layout = QGridLayout(self)
         self.text_edit = QTextEdit()  # 用于打印终端信息
-
         # 实例化控件创建
         self.widget_creator = WidgetCreator()
-
         # 创建各部分控件
         self.create_can_port_widgets()
         self.create_arm_selection_widgets()
@@ -73,32 +76,28 @@ class MainWindow(QWidget):
         self.layout.addWidget(self.button_activatecan, 0, 3)
         self.layout.addWidget(self.button_enable, 0, 4)
         self.layout.addWidget(self.button_disable, 0, 5)
-
         # 第二行：重置、夹爪零点、到达零点、主从臂选择、参数初始化按钮
         self.layout.addWidget(self.button_reset, 1, 0)
         self.layout.addWidget(self.button_gripper_zero, 1, 1)
         self.layout.addWidget(self.button_go_zero, 1, 2)
         self.layout.addWidget(self.arm_combobox, 1, 3)
         self.layout.addWidget(self.button_config_init, 1, 4)
-
         # 第三行：添加夹爪示教器参数设置框和信息读取框
         self.layout.addWidget(self.gripper_teaching_frame, 2, 0, 5, 3)
         self.layout.addWidget(self.read_frame, 2, 3, 5, 5)
-
         # 右上角添加 Logo 和硬件版本显示、can帧率显示、关节使能状态显示
         col = self.layout.columnCount()
         self.layout.addWidget(self.label, 0, col)
         self.layout.addWidget(self.hardware_edit, 1, col)
         self.layout.addWidget(self.button_hardware, 2, col)
         self.layout.addWidget(self.enable_status_edit_frame, 3, col-2, 4, col-2)
-
         # 底部添加取消、退出按钮及终端信息打印窗口
         downrow=self.layout.rowCount()
         self.layout.addWidget(self.button_cancel, downrow+5, col)
         self.layout.addWidget(self.button_close, downrow+6, col)
         self.layout.addWidget(self.text_edit, downrow, 0, downrow, round(col/2)-1)
         self.layout.addWidget(self.message_edit, downrow, round(col/2)-1, downrow, col-3)
-
+    
     def init_connections(self):
         # 连接各控件信号和对应槽函数
         self.button_findcan.clicked.connect(self.run_findcan)
@@ -153,25 +152,20 @@ class MainWindow(QWidget):
     def create_gripper_teaching_widgets(self):
         # 夹爪及示教器参数设置框
         self.gripper_teaching_frame = self.widget_creator.create_frame(frame_shape=QFrame.Box,line_width=1)
-
         # 示教器行程滑块、标签及显示框
         self.slider_label = self.widget_creator.create_label("Teach pendant stroke", size=(150, 15))
         self.slider = self.widget_creator.create_slider(min_value=100, max_value=200, value=100, orientation='horizontal', enabled=self.is_found and self.is_activated)
         self.slider_text_edit = self.widget_creator.create_text_edit(size=(60, 30), read_only=True)
-
         # 夹爪行程下拉框
         self.gripper_combobox_label = self.widget_creator.create_label("Gripper stroke", size=(150, 15))
         self.gripper_combobox = self.widget_creator.create_combo_box(items=["70", "0", "100"], size=(60, 30), enabled=self.is_found and self.is_activated)
         self.button_confirm = self.widget_creator.create_button(text="Confirm", size=(80, 40), enabled=self.is_found and self.is_activated)
-
         # 夹爪清错按钮
         self.button_gripper_clear_err = self.widget_creator.create_button(text="Gripper\ndisable\nand\nclear err", size=(60, 80), enabled=self.is_found and self.is_activated)
-
         # 夹爪控制滑块
         self.gripper_slider_label = self.widget_creator.create_label("Gripper control", size=(150, 15))
         self.gripper_slider = self.widget_creator.create_slider(min_value=0, max_value=70, value=0, orientation='horizontal', enabled=self.is_enable)
         self.gripper_slider_edit = self.widget_creator.create_text_edit(size=(60, 30), read_only=True)
-
         gripper_teaching_layout = [
             (self.slider_label, 0, 0),
             (self.slider, 1, 0),
@@ -185,7 +179,7 @@ class MainWindow(QWidget):
             (self.gripper_slider_edit, 5, 1)
         ]
         self.widget_creator.add_layout_to_frame(self.gripper_teaching_frame, gripper_teaching_layout)
-
+    
     def create_hardware_widgets(self):
         # 硬件版本显示相关控件
         self.button_hardware = self.widget_creator.create_button("hardware version", size=(150, 40), enabled=self.is_found and self.is_activated)
@@ -203,9 +197,7 @@ class MainWindow(QWidget):
         )
         self.button_read_confirm = self.widget_creator.create_button('Start', size=(80, 40), enabled=self.is_found and self.is_activated)
         self.button_stop_print = self.widget_creator.create_button('Stop', size=(80, 40), enabled=self.is_found and self.is_activated and self.start_button_pressed)
-
         self.installpos_combobox_lable = self.widget_creator.create_label('Installation position',size=(120,40))
-
         self.installpos_combobox = self.widget_creator.create_combo_box(
             items=["Parallel", "Left", "Right"],
             size=(150, 40),
@@ -226,7 +218,7 @@ class MainWindow(QWidget):
             (self.button_installpos_confirm, 3, 1)
             ]
         self.widget_creator.add_layout_to_frame(self.read_frame, read_layout)
-
+    
     def create_extra_widgets(self):
         # 关节使能状态显示 can帧率显示及取消、退出按钮
         self.enable_status_edit_lable = self.widget_creator.create_label('Enable flag', size=(150, 20))
@@ -238,11 +230,10 @@ class MainWindow(QWidget):
                                      (self.can_fps_edit_lable, 2, 0),(self.can_fps_edit, 3, 0)]
         self.widget_creator.add_layout_to_frame(self.enable_status_edit_frame,enable_status_edit_layout)
         self.button_cancel = self.widget_creator.create_button('Cancel', size=(150, 40), enabled=True)
-        self.button_close = self.widget_creator.create_button('Exit', size=(150, 40), enabled=True)
+        self.button_close = self.widget_creator.create_button('Close', size=(150, 40), enabled=True)
 
     def create_logo(self):
         # 添加 Logo 图片
-        # 创建 QLabel 控件
         self.label = self.widget_creator.create_label('', size=(150, 40))
         main_dir = os.path.dirname(os.path.abspath(__file__))
         image_path = os.path.join(main_dir, 'logo-white.png')
@@ -274,7 +265,7 @@ class MainWindow(QWidget):
         self.button_gripper_clear_err.setEnabled(self.base_state)
         self.name_edit.setEnabled(self.is_activated)
         self.button_read_confirm.setEnabled(self.base_state)
-        
+    
     # ==============================
     # 以下为各功能模块的槽函数和业务逻辑
     # ==============================
@@ -300,13 +291,22 @@ class MainWindow(QWidget):
 
     # can断开提醒
     def can_warning(self):
-            # 创建警告消息框
-        msg = QMessageBox()
-        msg.setIcon(QMessageBox.Warning)  # 设置消息框图标为警告
-        msg.setWindowTitle("Warnning")  # 设置消息框标题
-        msg.setText("No information for the CAN port.\nPlease restart the PUI after checking the wiring.")  # 设置提示框的内容
-        msg.setStandardButtons(QMessageBox.Ok)  # 设置标准按钮（“确定”按钮）
-        msg.exec_()  # 显示消息框
+        current_time = time.time()
+        if current_time - self.last_canwarning_time >= 5:  # 至少 5 秒间隔
+            self.last_canwarning_time = current_time  # 更新触发时间
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Warning)  # 设置消息框图标为警告
+            msg.setWindowTitle("Warnning")  # 设置消息框标题
+            msg.setText("No information for the CAN port.")  # 设置提示框的内容
+            msg.setStandardButtons(QMessageBox.Ok)  # 设置标准按钮（“确定”按钮）
+            msg.buttonClicked.connect(self.on_warning_ok)
+            msg.exec_()  # 显示消息框
+        else:
+            return
+    
+    def on_warning_ok(self, button):
+        # 当点击“确定”按钮时，重置标志位
+        self.warning_shown = False
 
     # 输出终端信息
     def handle_stdout(self):
@@ -315,6 +315,12 @@ class MainWindow(QWidget):
 
     # 查找端口
     def run_findcan(self):
+        self.first_activatecan = True
+        current_time = time.time()
+        if current_time - self.last_findcan_time >= 0.1:  # 至少 0.1 秒间隔
+            self.last_findcan_time = current_time  # 更新触发时
+        else:
+            return
         # 检查密码是否已设置
         if not self.password:
             self.password = self.prompt_for_password()
@@ -357,6 +363,9 @@ class MainWindow(QWidget):
                             self.is_activated = False
                     # 更新各控件状态
                     self.update_ui_states()
+            else :
+                self.is_activated = False
+                self.update_ui_states()
             for row in self.port_matches:
                 if len(row) > 0:
                     self.piper_interface_flag[row[0]] = False
@@ -364,14 +373,11 @@ class MainWindow(QWidget):
             self.text_edit.append(f"Found {port_num} ports\n")
         self.process.readyReadStandardOutput.connect(updateprint)
         self.is_found = True
-        time.sleep(0.05)
         self.button_activatecan.setEnabled(self.is_found)
-        if not self.process.waitForStarted():
-            self.text_edit.append("[Error]: Unable to start script.")
-            return
 
     # 激活端口
     def run_activatecan(self):
+        self.first_activatecan = True
         if not self.port_matches:
             self.text_edit.append("[Error]: No ports found. Please run 'Find CAN Port' first.")
             return
@@ -392,23 +398,16 @@ class MainWindow(QWidget):
             return
         self.process = QProcess(self)
         self.process.start('bash', ['-c', command])
-        time.sleep(0.05)
         self.create_piper_interface(self.port_matches[self.selected_port][0], False)
         self.piper.ConnectPort(True)
         self.process.readyReadStandardOutput.connect(self.handle_stdout)
         self.readhardware()
-        self.already_warn = False
-        if self.enable_status_thread is None:
-            self.enable_status_thread = MyClass()  # 初始化线程
-            self.enable_status_thread.start_reading_thread(self.display_enable_fun)
-            self.enable_status_thread.worker.update_signal.connect(self.update_enable_status)
         # 重新查找端口以更新状态
         script_dir = os.path.dirname(os.path.realpath(__file__))
         script_path = os.path.join(script_dir, 'find_all_can_port.sh')
         self.process_find = QProcess(self)
         command_find = f"echo {self.password} | sudo -S bash {script_path}"
         self.process_find.start('bash', ['-c', command_find])
-        self.process_find.finished.connect(self.on_process_find_finished)
         def updateprint():
             data = self.process_find.readAllStandardOutput().data().decode('utf-8')
             self.text_edit.append(data)
@@ -439,13 +438,13 @@ class MainWindow(QWidget):
                     # 更新各控件状态
                     self.update_ui_states()
         self.process_find.readyReadStandardOutput.connect(updateprint)
-        time.sleep(0.05)
+        self.run_findcan()
 
     # 创建 piper 接口
     def create_piper_interface(self, port: str, is_virtual: bool) -> Optional[C_PiperInterface_V2]:
         if self.piper_interface_flag.get(port) is False:
             self.piper = C_PiperInterface_V2(port, is_virtual)
-            self.piper.ConnectPort()
+            self.piper.ConnectPort(True)
             self.piper_interface_flag[port] = True
 
     # 线程中用于更新关节使能状态的函数
@@ -464,14 +463,6 @@ class MainWindow(QWidget):
             self.is_enable = False
             self.gripper_slider.setEnabled(self.is_enable)
         data = "".join(map(str, enable_list))
-        if not self.piper.isOk():
-            if not self.already_warn:
-                self.can_warning()
-                self.already_warn = True
-                self.piper.DisconnectPort(True)
-                self.is_activated = False
-                self.update_ui_states()
-        # self.can_fps_edit.clear()
         can_fps = round(self.piper.GetCanFps())
         return data, can_fps
 
@@ -532,7 +523,7 @@ class MainWindow(QWidget):
         cursor.movePosition(QTextCursor.End)
         edit.setTextCursor(cursor)
         edit.ensureCursorVisible()
-
+    
     def read_max_acc_limit(self):
         self.piper.SearchAllMotorMaxAccLimit()
         self.message_edit.append(f"{self.piper.GetAllMotorMaxAccLimit()}")
@@ -551,15 +542,29 @@ class MainWindow(QWidget):
         return f"{self.piper.GetArmStatus()}"
 
     def update_label(self, data):
-        self.message_edit.append(data)
+        self.message_edit.append(" ".join(map(str, data)))
+        # self.message_edit.append(data)
         self.update_text(self.message_edit)
         time.sleep(0.01)
 
     def update_enable_status(self, data):
-        self.enable_status_edit.clear()
-        self.enable_status_edit.append(data[0])
-        self.can_fps_edit.clear()
-        self.can_fps_edit.append(str(data[1]))
+        current_time = time.time()
+        if current_time - self.last_update_enable_status_time >= 0.1:
+            self.last_update_enable_status_time = current_time  # 更新触发时间
+            self.enable_status_edit.clear()
+            self.enable_status_edit.append(data[0])
+            self.can_fps_edit.clear()
+            self.can_fps = data[1]
+            self.can_fps_edit.append(str(data[1]))
+            if self.can_fps == 0:
+                self.can_warning()
+                self.piper.DisconnectPort(True)
+                self.is_activated = False
+            elif self.can_fps >= 2000:
+                self.piper.ConnectPort(True)
+                self.is_activated = True
+            else: 
+                self.piper.ConnectPort(True)
 
     def Confirmation_of_message_reading_type_options(self):
         selected_index = self.read_combobox.currentIndex() if self.read_combobox.currentIndex() >= 0 else 0
@@ -593,7 +598,7 @@ class MainWindow(QWidget):
             self.message_thread.worker.update_signal.connect(self.update_label)
         else:
             self.text_edit.append("[Error]: Please select a type to read.")
-
+    
     def stop_print(self):
         self.text_edit.append("[Info]: Stop print.")
         self.stop_button_pressed = True
@@ -608,6 +613,7 @@ class MainWindow(QWidget):
 
     def gripper_clear_err(self):
         self.piper.GripperCtrl(abs(self.gripper * 1000), 1000, 0x02, 0)
+        self.text_edit.append("[Info]: Gripper clear err.")
 
     def readhardware(self):
         """
@@ -617,8 +623,6 @@ class MainWindow(QWidget):
         if self.piper:
             version = self.piper.GetPiperFirmwareVersion()
             self.hardware_edit.setText(f"Hardware version\n{version}")
-        else:
-            self.hardware_edit.setText("未连接到 piper 接口")
 
     def update_gripper(self):
         self.gripper = self.gripper_slider.value()
@@ -639,16 +643,8 @@ class MainWindow(QWidget):
         self.text_edit.append(f"Arm installation position set: {mode}")
 
     def on_arm_mode_combobox_select(self):
-        """
-        主从臂选择后的处理：
-        根据下拉框当前索引设置 selected_arm 为 "slave" 或 "master"，
-        并在 text_edit 控件中打印选择结果，最后调用 master_slave_config() 方法进行配置切换。
-        """
-        # 如果当前索引为 0，则选择 "slave"，否则选择 "master"
         self.selected_arm = "slave" if self.arm_combobox.currentIndex() == 0 else "master"
-        # 将选择结果输出到终端信息显示控件中
         self.text_edit.append(f"Selected Arm: {self.selected_arm}")
-        # 根据选择结果切换主从臂配置
         self.master_slave_config()
 
     def update_ui_states_master(self):
@@ -667,7 +663,6 @@ class MainWindow(QWidget):
         self.button_gripper_clear_err.setEnabled(self.base_state and not self.master_flag)
 
     def master_slave_config(self):
-        
         if self.selected_arm == "master":
             self.piper.MasterSlaveConfig(0xFA, 0, 0, 0)
             self.master_flag = True
@@ -684,27 +679,20 @@ class MainWindow(QWidget):
                 self.text_edit.append(f"Master-Slave config still set to: Master")
 
     def on_port_combobox_select(self):
-        if not self.selected_port:  # Check if 'selected_port' is already set
-            self.selected_port = 0  # Set default value to the first item (index 0)
-
+        if not self.selected_port:
+            self.selected_port = 0
         current_index = self.port_combobox.currentIndex()
-
         self.piper_interface_flag[f"{self.port_matches[self.selected_port][0]}"] = False
-        # 检查是否有有效的选择（索引 >= 0）
         if current_index >= 0:
             self.selected_port = current_index  # 更新为有效的选择
-            # self.piper.DisconnectPort()
             self.create_piper_interface(f"{self.port_matches[self.selected_port][0]}", False)
             self.text_edit.append(f"Selected Port: can{self.selected_port}")
         else:
-            # 如果没有有效选择，可以处理该情况
-            self.text_edit.append("没有选择有效的端口。")
-            self.text_edit.append(f"Selected Port: can{self.selected_port}")
-
+            self.text_edit.append("No valid port selected. Please select again.")
+            return
         if 0 <= self.selected_port < len(self.port_matches):
             self.name_edit.clear()
             self.name_edit.append(self.port_matches[self.selected_port][0])
-            # print(self.port_matches[0][2])
             if self.port_matches[self.selected_port][2] == str(True):
                 self.is_activated = True
                 self.readhardware()
@@ -727,14 +715,6 @@ class MainWindow(QWidget):
 
     def close(self):
         return super().close()
-
-    def on_process_find_finished(self):
-        exit_code = self.process_find.exitCode()
-        if exit_code == 0:
-            self.text_edit.append("[Info]: Process executed successfully.")
-        else:
-            self.text_edit.append(f"[Error]: Process failed with exit code {exit_code}.")
-
 # 运行程序的入口函数
 def main():
     app = QApplication(sys.argv)

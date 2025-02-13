@@ -191,7 +191,7 @@ class MainWindow(QWidget):
         self.Status_information_reading_label = self.widget_creator.create_label('Status information reading',size=(150,40))
         self.button_read_acc_limit = self.widget_creator.create_button('Max Acc Limit', size=(120, 40), enabled=self.is_found and self.is_activated)
         self.read_combobox = self.widget_creator.create_combo_box(
-            items=["Angle Speed Limit", "joint Status", "Gripper Status", "Piper Status"],
+            items=["Angle Speed Limit", "joint Status", "Gripper Status", "Piper Status", "FK"],
             size=(150, 40),
             enabled=self.is_found and self.is_activated and self.start_button_pressed_select
         )
@@ -540,7 +540,19 @@ class MainWindow(QWidget):
 
     def read_piper_status(self):
         return f"{self.piper.GetArmStatus()}"
-
+    
+    def getfk(self):
+        feedback = self.piper.GetFK('feedback')
+        control = self.piper.GetFK('control')
+        joint_data = {
+            "Feedback": {f"Joint {i + 1}": feedback[i] for i in range(len(feedback))},
+            "Control": {f"Joint {i + 1}": control[i] for i in range(len(control))}
+        }
+        return (f"Feedback:\n" + 
+                "\n".join([f"  {joint}: {value}" for joint, value in joint_data["Feedback"].items()]) + 
+                f"\nControl:\n" + 
+                "\n".join([f"  {joint}: {value}" for joint, value in joint_data["Control"].items()]))
+    
     def update_label(self, data):
         self.message_edit.append(" ".join(map(str, data)))
         # self.message_edit.append(data)
@@ -595,6 +607,12 @@ class MainWindow(QWidget):
             self.stop_button_pressed = False
             self.message_thread = MyClass()
             self.message_thread.start_reading_thread(self.read_piper_status)
+            self.message_thread.worker.update_signal.connect(self.update_label)
+        elif selected_index == 4:
+            self.text_edit.append("[Info]: Reading FK.")
+            self.stop_button_pressed = False
+            self.message_thread = MyClass()
+            self.message_thread.start_reading_thread(self.getfk)
             self.message_thread.worker.update_signal.connect(self.update_label)
         else:
             self.text_edit.append("[Error]: Please select a type to read.")

@@ -150,6 +150,7 @@ pui
 | |Joint Status: Read the joint angle message|
 | |Gripper Status: Read the robotic arm's gripper status|
 | |Piper Status: Read the robotic arm's status (different mode statuses)|
+| |FK: Read the forward kinematics (FK) of the robot arm control and feedback for each joint|
 |Max Acc Limit button|Print the current joint maximum acceleration limit in the lower-right text box|
 |Installation position option|Select the installation direction of the robotic arm (select and confirm after choice)|
 | |Parallel: Horizontal standard installation|

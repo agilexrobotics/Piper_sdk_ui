@@ -152,6 +152,7 @@ pui
 | |Joint Status：读取关节角消息|
 | |Gripper Status：读取机械臂夹爪状态|
 | |Piper Status：机械臂状态读取(不同模式状态)|
+| |FK：读取机械臂控制及反馈信息各关节正解|
 |Max Acc Limit按钮|打印当前关节最大加速度限制在右下角文字框|
 |Installation position选项|选择机械臂安装方向（选择后confirm确认）|
 | |Parallel：水平正装|

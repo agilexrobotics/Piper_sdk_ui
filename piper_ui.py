@@ -35,7 +35,6 @@ class MainWindow(QWidget):
         self.Teach_pendant_stroke = 100   # 示教器行程
         self.start_button_pressed = False  # 信息读取开始标志
         self.start_button_pressed_select = True
-        self.stop_button_pressed = False   # 信息读取停止标志
         self.flag = None              # 主从切换确认标志
         self.can_fps = 0              # can口的fps
         self.limited_timers = {}  # 存储不同函数的定时器
@@ -82,7 +81,7 @@ class MainWindow(QWidget):
         self.layout.addWidget(self.button_go_zero, 1, 2)
         self.layout.addWidget(self.arm_combobox, 1, 3)
         self.layout.addWidget(self.button_config_init, 1, 4)
-        # 第三行：添加夹爪示教器参数设置框和信息读取框
+        # 第三行：添加 夹爪示教器参数设置框 和 信息读取框
         self.layout.addWidget(self.gripper_teaching_frame, 2, 0, 5, 3)
         self.layout.addWidget(self.read_frame, 2, 3, 5, 5)
         # 右上角添加 Logo 和硬件版本显示、can帧率显示、关节使能状态显示
@@ -113,7 +112,7 @@ class MainWindow(QWidget):
         self.button_gripper_clear_err.clicked.connect(self.gripper_clear_err)
         self.button_hardware.clicked.connect(self.readhardware)
         self.button_read_acc_limit.clicked.connect(self.read_max_acc_limit)
-        self.button_read_confirm.clicked.connect(self.Confirmation_of_message_reading_type_options)
+        self.button_start_print.clicked.connect(self.Confirmation_of_message_reading_type_options)
         self.button_stop_print.clicked.connect(self.stop_print)
         self.button_installpos_confirm.clicked.connect(self.installation_position_config)
         self.arm_combobox.currentIndexChanged.connect(self.on_arm_mode_combobox_select)
@@ -195,7 +194,7 @@ class MainWindow(QWidget):
             size=(150, 40),
             enabled=self.is_found and self.is_activated and self.start_button_pressed_select
         )
-        self.button_read_confirm = self.widget_creator.create_button('Start', size=(80, 40), enabled=self.is_found and self.is_activated)
+        self.button_start_print = self.widget_creator.create_button('Start', size=(80, 40), enabled=self.is_found and self.is_activated)
         self.button_stop_print = self.widget_creator.create_button('Stop', size=(80, 40), enabled=self.is_found and self.is_activated and self.start_button_pressed)
         self.installpos_combobox_lable = self.widget_creator.create_label('Installation position',size=(120,40))
         self.installpos_combobox = self.widget_creator.create_combo_box(
@@ -211,7 +210,7 @@ class MainWindow(QWidget):
             (self.Status_information_reading_label, 0, 0 ),
             (self.button_read_acc_limit, 0, 1 ),
             (self.read_combobox, 1, 0 ),
-            (self.button_read_confirm, 1, 1 ),
+            (self.button_start_print, 1, 1 ),
             (self.button_stop_print, 1, 2 ),
             (self.installpos_combobox_lable, 2, 0 ),
             (self.installpos_combobox, 3, 0 ),
@@ -264,7 +263,7 @@ class MainWindow(QWidget):
         self.button_hardware.setEnabled(self.base_state)
         self.button_gripper_clear_err.setEnabled(self.base_state)
         self.name_edit.setEnabled(self.is_activated)
-        self.button_read_confirm.setEnabled(self.base_state)
+        self.button_start_print.setEnabled(self.base_state)
     
     # ==============================
     # 以下为各功能模块的槽函数和业务逻辑
@@ -554,8 +553,20 @@ class MainWindow(QWidget):
                 "\n".join([f"  {joint}: {value}" for joint, value in joint_data["Control"].items()]))
     
     def update_label(self, data):
-        self.message_edit.append(" ".join(map(str, data)))
-        # self.message_edit.append(data)
+        max_chars = 50000  # 设置最大字符数
+        new_text = " ".join(map(str, data)) + "\n"
+
+        # 在文本末尾追加新内容
+        self.message_edit.moveCursor(QTextCursor.End)
+        self.message_edit.insertPlainText(new_text)
+
+        # 获取当前文本
+        current_text = self.message_edit.toPlainText()
+
+        # 如果字符数超过 max_chars，删除最早的部分
+        if len(current_text) > max_chars:
+            self.message_edit.setPlainText(current_text[-max_chars:])
+
         self.update_text(self.message_edit)
         time.sleep(0.01)
 
@@ -582,35 +593,31 @@ class MainWindow(QWidget):
         selected_index = self.read_combobox.currentIndex() if self.read_combobox.currentIndex() >= 0 else 0
         self.start_button_pressed = True
         self.start_button_pressed_select = False
+        self.button_start_print.setEnabled(self.is_found and self.is_activated and not self.start_button_pressed)
         self.button_stop_print.setEnabled(self.is_found and self.is_activated and self.start_button_pressed)
         self.read_combobox.setEnabled(self.is_found and self.is_activated and self.start_button_pressed_select)
         if selected_index == 0:
             self.text_edit.append("[Info]: Reading angle speed limit.")
-            self.stop_button_pressed = False
             self.message_thread = MyClass()
             self.message_thread.start_reading_thread(self.read_max_angle_speed)
             self.message_thread.worker.update_signal.connect(self.update_label)
         elif selected_index == 1:
             self.text_edit.append("[Info]: Reading joint status.")
-            self.stop_button_pressed = False
             self.message_thread = MyClass()
             self.message_thread.start_reading_thread(self.read_joint_status)
             self.message_thread.worker.update_signal.connect(self.update_label)
         elif selected_index == 2:
             self.text_edit.append("[Info]: Reading gripper status.")
-            self.stop_button_pressed = False
             self.message_thread = MyClass()
             self.message_thread.start_reading_thread(self.read_gripper_status)
             self.message_thread.worker.update_signal.connect(self.update_label)
         elif selected_index == 3:
             self.text_edit.append("[Info]: Reading piper status.")
-            self.stop_button_pressed = False
             self.message_thread = MyClass()
             self.message_thread.start_reading_thread(self.read_piper_status)
             self.message_thread.worker.update_signal.connect(self.update_label)
         elif selected_index == 4:
             self.text_edit.append("[Info]: Reading FK.")
-            self.stop_button_pressed = False
             self.message_thread = MyClass()
             self.message_thread.start_reading_thread(self.getfk)
             self.message_thread.worker.update_signal.connect(self.update_label)
@@ -619,10 +626,10 @@ class MainWindow(QWidget):
     
     def stop_print(self):
         self.text_edit.append("[Info]: Stop print.")
-        self.stop_button_pressed = True
         self.message_thread.stop_reading_thread()
         self.start_button_pressed = False
         self.start_button_pressed_select = True
+        self.button_start_print.setEnabled(self.is_found and self.is_activated and not self.start_button_pressed)
         self.button_stop_print.setEnabled(self.is_found and self.is_activated and self.start_button_pressed)
         self.read_combobox.setEnabled(self.is_found and self.is_activated and self.start_button_pressed_select)
 

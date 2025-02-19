@@ -169,6 +169,7 @@ pui
 
 - **解决** ：
     ```
+    conda activate pyqt5
     conda install -c conda-forge gcc
     ```
 

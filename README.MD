@@ -142,6 +142,7 @@ pui
 |Go Zero按钮|机械臂前往零点|
 |（Slave / Master）选项|机械臂设置为从臂/主臂（主臂即为示教模式）|
 |Config init按钮|机械臂设置全部关节限位、关节最大速度、关节加速度为默认值|
+|Stop按钮|机械臂缓慢下落，使用后需要reset，并重新使能两次|
 |hardware version按钮|输出（更新）机械臂主控固件版本在右上方文字框|
 |Teach pendant stroke滑块|示教夹抓百分比放大100%-200%（设置主臂，值显示在右侧文字框）|
 |Gripper stroke选项|设定正在使用夹爪的行程（默认为70，选择后confirm确认）|
@@ -162,6 +163,14 @@ pui
 |Cancel按钮|取消当前操作|
 |Exit按钮|关闭窗口|
 
+## Q$A
+
+- **报错** ：libGL error: MESA-LOADER: failed to open iris: /usr/lib/dri/iris_dri.so: 无法打开共享目标文件: 没有那个文件或目录 (search paths /usr/lib/x86_64-linux-gnu/dri:\$${ORIGIN}/dri:/usr/lib/dri, suffix _dri)
+
+- **解决** ：
+    ```
+    conda install -c conda-forge gcc
+    ```
 
 ## 注意事项
 

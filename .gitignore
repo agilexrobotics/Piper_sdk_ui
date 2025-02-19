@@ -13,3 +13,4 @@ src/piper/backup
 analytical_solution
 oculus_reader
 /__pycache__
+/scripts/__pycache__

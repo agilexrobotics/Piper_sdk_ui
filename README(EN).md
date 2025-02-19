@@ -18,69 +18,77 @@ Test:
 
 ### 1.1 Installation Environment
 
-Note: Python version is 3.10, it is recommended to use a conda environment, and python-can version should be higher than 4.3.1.
+Note: The Python version should be 3.10. It is recommended to use a conda environment, and the python-can version should be higher than 4.3.1.
 
-Create and activate the conda environment
+Create and activate the conda environment:
 
 ```shell
 conda create -n pyqt5 python=3.10
 ```
+
 ```shell
 conda activate pyqt5
 ```
 
 ### 1.2 Install Dependencies
 
-Install can and sdk
+Install can and sdk:
 
 ```shell
 pip3 install python-can
 ```
+
 ```shell
 pip3 install piper_sdk
 ```
 
-View the details of piper_sdk, such as installation path, version, etc.
+Check the details of piper_sdk, such as installation path, version, etc.:
 
 ```shell
 pip3 show piper_sdk
 ```
-Ensure that the SDK version is 0.1.9.
 
-0.0.x is the sdk version supported before the robotic arm V1.5-2 firmware.
+Ensure the sdk version is 0.1.9.
 
-The last version number of 0.0.x is 0.1.9.
+The 0.0.x versions support firmware versions prior to robotic arm V1.5-2.
 
-To uninstall
+The last version of 0.0.x is 0.1.9.
+
+To uninstall:
 
 ```shell
 pip3 uninstall piper_sdk
 ```
 
-### 1.2 Install can Tools
+### 1.3 Install CAN Tools
 
 ```shell
 sudo apt update && sudo apt install can-utils ethtool
 ```
 
-If you encounter ip: command not found when executing bash scripts, install the ip command with sudo apt-get install iproute2.
+If you encounter the error "ip: command not found" when running a bash script, install the `ip` command by running:
 
-### 1.3 Install PyQt5
+```shell
+sudo apt-get install iproute2
+```
 
-Install Qt development tools
+### 1.4 Install PyQt5
+
+Install Qt development tools:
+
 ```shell
 sudo apt install qt5-qmake qtbase5-dev
 ```
 
-Install PyQt5
+Install PyQt5:
 
 ```shell
 pip install pyqt5
-
 ```
+
 ## 2 Quick Start
 
-### 2.1 Run
+### 2.1 Running
 
 #### 2.1.1 Regular Run
 
@@ -88,38 +96,45 @@ pip install pyqt5
 cd ~/Piper_sdk_ui
 conda activate pyqt5
 ```
+
 ```shell
 python piper_ui.py
 ```
 
 #### 2.1.2 Quick Run
 
-Configuration (Note: Bash terminal required)
+Configure (make sure it's a bash terminal).
 
-Check the conda environment location
+Check the location of your conda environment:
 
 ```shell
 conda env list
 ```
-Output the environment location, for example
+
+Example output:
+
 ```
 # conda environments:
 #
 base                   /home/tian/miniconda3
 pyqt                   /home/tian/miniconda3/envs/pyqt
 ```
-Add a shortcut command in ./bashrc
+
+Add a shortcut command to `~/.bashrc`:
+
 ```shell
 echo "alias pui='~/miniconda3/envs/pyqt5/bin/python ~/Piper_sdk_ui/piper_ui.py'" >> ~/.bashrc && source ~/.bashrc
 ```
-Make sure to change the conda environment and piper_ui.py paths to your own.
 
-Run
+Make sure to change the conda environment and piper_ui.py paths to your own paths.
 
-source ~/.bashrc can automatically source upon restarting the terminal
+Run:
+
 ```shell
 source ~/.bashrc
 ```
+
+Then execute:
 
 ```shell
 pui
@@ -129,41 +144,51 @@ pui
 
 |Operation |Action|
 |---|---|
-|Find CAN Port button|Find the current CAN port, requires root password|
-| (can0 / can*) options| Select the corresponding port to operate the robotic arm and display whether the port is activated. | 
-| CAN port rename input box | Enter or change the port name, apply after activation. |
-|Activate CAN Port button|Activate the port (after this, all subsequent functions can only be used after the port is activated)|
-|Enable button|Enable the robotic arm|
-|Disable button|Disable the robotic arm|
-|Reset button|Reset the robotic arm, needs to be executed once after setting to teach mode (Note: after reset, the robotic arm will fall)|
-|Gripper Zero button|Set the zero point for the robotic arm's gripper|
-|Go Zero button|Move the robotic arm to the zero point|
-|（Slave / Master）option|Set the robotic arm as Slave/Master (Master refers to teach mode)|
-|Config init button|Set all joint limits, maximum joint speed, and joint acceleration to default values|
-|Hardware version button|Output (update) the firmware version of the robotic arm controller in the top-right text box|
-|Teach pendant stroke slider|Adjust teach pendant gripper percentage from 100%-200% (set to master arm, value displayed in the text box on the right)|
-|Gripper stroke option|Set the stroke of the gripper currently in use (default is 70, select and confirm after choice)|
-|Gripper control slider|Enable and control the opening/closing of the gripper, value displayed in the text box on the right|
-|Gripper disable and clear err|Disable the gripper and clear errors (used when the gripper overheats and triggers an error)|
-|Status information reading option|Start button begins/Stop button stops (prints in the lower-right text box and continuously updates)|
-| |Angle Speed Limit: Read the maximum angle and speed limits of all the robotic arm's motors|
-| |Joint Status: Read the joint angle message|
-| |Gripper Status: Read the robotic arm's gripper status|
-| |Piper Status: Read the robotic arm's status (different mode statuses)|
-| |FK: Read the forward kinematics (FK) of the robot arm control and feedback for each joint|
-|Max Acc Limit button|Print the current joint maximum acceleration limit in the lower-right text box|
-|Installation position option|Select the installation direction of the robotic arm (select and confirm after choice)|
-| |Parallel: Horizontal standard installation|
-| |Left: Left side installation|
-| |Right: Right side installation|
-|Joint enable status text box|Displays the enable status of six joints (1 for enabled, 0 for disabled, starting from the first joint on the base)|
-|Cancel button|Cancel the current operation|
-|Exit button|Close the window|
+|Find CAN Port Button|Search for the current CAN port, root password is required|
+|(can0 / can*) Options|Select the robotic arm to operate based on the corresponding port, and check if the port is activated|
+|CAN Port Rename Input Box|Enter or change the port name, apply after activation|
+|Activate CAN Port Button|Activate the port (all subsequent functions can only be used after activation)|
+|Enable Button|Enable the robotic arm|
+|Disable Button|Disable the robotic arm|
+|Reset Button|Reset the robotic arm, needs to be done after setting to teach mode (note: the arm will fall after reset)|
+|Gripper Zero Button|Set the gripper's zero point|
+|Go Zero Button|Move the robotic arm to the zero point|
+|(Slave / Master) Option|Set the robotic arm to Slave/Master (Master is the teach mode)|
+|Config Init Button|Set all joint limits, max speed, and max acceleration to default values|
+|Stop button|The robotic arm slowly drops. After use, it needs to be reset and enabled twice again|
+|Hardware Version Button|Display (update) the main control firmware version of the robotic arm in the top-right corner|
+|Teach Pendant Stroke Slider|Zoom in/out the teach pendant stroke from 100%-200% (set to master arm, value displayed on the right)|
+|Gripper Stroke Option|Set the current gripper stroke (default is 70, select and confirm)|
+|Gripper Control Slider|Enable and control the gripper, value displayed on the right|
+|Gripper Disable and Clear Error|Disable gripper and clear errors (use if gripper overheats)|
+|Status Information Reading Option|Start/Stop button (prints in the lower-right text box, constantly updating)|
+| |Angle Speed Limit: Read the maximum angle and speed limits of all the motors|
+| |Joint Status: Read joint angle messages|
+| |Gripper Status: Read the gripper status|
+| |Piper Status: Read the robotic arm status (different modes)|
+| |FK: Read the forward kinematics feedback for each joint|
+|Max Acc Limit Button|Display the current joint max acceleration limit in the lower-right text box|
+|Installation Position Option|Select the robotic arm installation direction (confirm after selection)|
+| |Parallel: Horizontal installation|
+| |Left: Left-side installation|
+| |Right: Right-side installation|
+|Joint Enable Status Text Box|Displays the joint enable status for all six joints (1 for enabled, 0 for disabled, first joint is the base)|
+|Cancel Button|Cancel the current operation|
+|Exit Button|Close the window|
+
+## Q&A
+
+- **Error**: libGL error: MESA-LOADER: failed to open iris: /usr/lib/dri/iris_dri.so: cannot open shared object file: No such file or directory (search paths /usr/lib/x86_64-linux-gnu/dri:$${ORIGIN}/dri:/usr/lib/dri, suffix _dri)
+
+- **Solution**:
+    ```
+    conda install -c conda-forge gcc
+    ```
 
 ## Notes
 
-- CAN devices must be activated first, and the correct baud rate should be set before reading messages or controlling the robotic arm.
-- The C_PiperInterface interface class can pass the activated CAN route name during instantiation, which can be obtained via ifconfig.
-- Sometimes when executing CAN send, the terminal may show "Message NOT sent," meaning the CAN module has not successfully connected to the device. Check the module's connection to the robotic arm, then power cycle the robotic arm before retrying.
-- After creating an instance of the SDK interface, it will check if the built-in CAN module is activated. For other CAN devices, set the second parameter to False, e.g., piper = C_PiperInterface_V2("can0", False).
-- **The mit protocol for controlling individual joint motors of the robotic arm is an advanced feature. Improper use of this protocol may lead to damage to the robotic arm!**
+- You need to first activate the CAN device and set the correct baud rate before reading or controlling the robotic arm messages.
+- The `C_PiperInterface` interface class allows passing the activated CAN route name when instantiating, which can be obtained via `ifconfig`.
+- If you receive the "Message NOT sent" error when trying to send a CAN message, the CAN module may not be connected to the device. Check the connection, power cycle the robotic arm, and try again.
+- The sdk interface checks for the activation of its internal CAN module upon instantiation. If using another CAN device, set the second argument to `False`, e.g., `piper = C_PiperInterface_V2("can0", False)`.
+- **The advanced feature of controlling individual motors of the robotic arm via the MIT protocol should be used with caution, as improper use may damage the arm!**

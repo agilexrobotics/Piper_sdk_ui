@@ -8,8 +8,8 @@ from PyQt5.QtGui import QPixmap, QTextCursor
 from PyQt5.QtCore import Qt, QProcess
 
 from piper_sdk import C_PiperInterface_V2  
-from thread_module import MyClass 
-from WidgetCreator import WidgetCreator
+from scripts.thread_module import MyClass 
+from scripts.WidgetCreator import WidgetCreator
 
 class MainWindow(QWidget):
     def __init__(self):
@@ -81,6 +81,7 @@ class MainWindow(QWidget):
         self.layout.addWidget(self.button_go_zero, 1, 2)
         self.layout.addWidget(self.arm_combobox, 1, 3)
         self.layout.addWidget(self.button_config_init, 1, 4)
+        self.layout.addWidget(self.button_piper_stop, 1, 5)
         # 第三行：添加 夹爪示教器参数设置框 和 信息读取框
         self.layout.addWidget(self.gripper_teaching_frame, 2, 0, 5, 3)
         self.layout.addWidget(self.read_frame, 2, 3, 5, 5)
@@ -107,6 +108,7 @@ class MainWindow(QWidget):
         self.button_go_zero.clicked.connect(self.run_go_zero)
         self.button_gripper_zero.clicked.connect(self.run_gripper_zero)
         self.button_config_init.clicked.connect(self.run_config_init)
+        self.button_piper_stop.clicked.connect(self.run_piper_stop)
         self.slider.valueChanged.connect(self.update_stroke)
         self.button_confirm.clicked.connect(self.confirm_gripper_teaching_pendant_param_config)
         self.button_gripper_clear_err.clicked.connect(self.gripper_clear_err)
@@ -147,6 +149,7 @@ class MainWindow(QWidget):
         self.button_go_zero = self.widget_creator.create_button(text="Go Zero", enabled=self.is_found and self.is_activated)
         self.button_gripper_zero = self.widget_creator.create_button(text="Gripper Zero", enabled=self.is_found and self.is_activated)
         self.button_config_init = self.widget_creator.create_button(text="Config Init", enabled=self.is_found and self.is_activated)
+        self.button_piper_stop = self.widget_creator.create_button(text="Stop", enabled=self.is_found and self.is_activated)
 
     def create_gripper_teaching_widgets(self):
         # 夹爪及示教器参数设置框
@@ -235,7 +238,7 @@ class MainWindow(QWidget):
         # 添加 Logo 图片
         self.label = self.widget_creator.create_label('', size=(150, 40))
         main_dir = os.path.dirname(os.path.abspath(__file__))
-        image_path = os.path.join(main_dir, 'logo-white.png')
+        image_path = os.path.join(main_dir, 'image', 'logo-white.png')
         pixmap = QPixmap(image_path)
         pixmap = pixmap.scaled(150, 40, Qt.KeepAspectRatio)  # 调整图片大小
         self.label.setPixmap(pixmap)
@@ -253,6 +256,7 @@ class MainWindow(QWidget):
         self.button_go_zero.setEnabled(self.base_state and not self.master_flag)
         self.button_gripper_zero.setEnabled(self.base_state and not self.master_flag)
         self.button_config_init.setEnabled(self.base_state and not self.master_flag)
+        self.button_piper_stop.setEnabled(self.base_state and not self.master_flag)
         self.slider.setEnabled(self.base_state and not self.master_flag)
         self.gripper_combobox.setEnabled(self.base_state and not self.master_flag)
         self.button_confirm.setEnabled(self.base_state and not self.master_flag)
@@ -478,6 +482,10 @@ class MainWindow(QWidget):
     def run_reset(self):
         self.piper.MotionCtrl_1(0x02, 0, 0)
         self.text_edit.append("[Info]: Arm reset.")
+    
+    def run_piper_stop(self):
+        self.piper.MotionCtrl_1(0x01, 0, 0)
+        self.text_edit.append("[Info]: Arm stop.")
 
     def run_go_zero(self):
         self.piper.MotionCtrl_2(0x01, 0x01, 100, 0x00)
@@ -679,6 +687,7 @@ class MainWindow(QWidget):
         self.button_go_zero.setEnabled(self.base_state and not self.master_flag)
         self.button_gripper_zero.setEnabled(self.base_state and not self.master_flag)
         self.button_config_init.setEnabled(self.base_state and not self.master_flag)
+        self.button_piper_stop.setEnabled(self.base_state and not self.master_flag)
         self.slider.setEnabled(self.base_state and not self.master_flag)
         self.gripper_combobox.setEnabled(self.base_state and not self.master_flag)
         self.button_confirm.setEnabled(self.base_state and not self.master_flag)

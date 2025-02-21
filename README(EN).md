@@ -1,3 +1,5 @@
+# Piper_sdk_ui
+
 [中文](README.MD)
 
 |Ubuntu |STATE|
@@ -113,7 +115,7 @@ conda env list
 
 Example output:
 
-```
+```plaintext
 # conda environments:
 #
 base                   /home/tian/miniconda3
@@ -153,6 +155,7 @@ pui
 |Reset Button|Reset the robotic arm, needs to be done after setting to teach mode (note: the arm will fall after reset)|
 |Gripper Zero Button|Set the gripper's zero point|
 |Go Zero Button|Move the robotic arm to the zero point|
+|Joint Ctrl Button|Open the joint control window to control the movement of the robotic arm joints|
 |(Slave / Master) Option|Set the robotic arm to Slave/Master (Master is the teach mode)|
 |Config Init Button|Set all joint limits, max speed, and max acceleration to default values|
 |Stop button|The robotic arm slowly drops. After use, it needs to be reset and enabled twice again|
@@ -181,7 +184,8 @@ pui
 - **Error**: libGL error: MESA-LOADER: failed to open iris: /usr/lib/dri/iris_dri.so: cannot open shared object file: No such file or directory (search paths /usr/lib/x86_64-linux-gnu/dri:$${ORIGIN}/dri:/usr/lib/dri, suffix _dri)
 
 - **Solution**:
-    ```
+
+    ```bash
     conda activate pyqt5
     conda install -c conda-forge gcc
     ```

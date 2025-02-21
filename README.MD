@@ -1,3 +1,5 @@
+# Piper_sdk_ui
+
 [EN](README(EN).md)
 
 |Ubuntu |STATE|
@@ -22,10 +24,11 @@ Test:
 
 创建并激活conda环境
 
-```shell
+```bash
 conda create -n pyqt5 python=3.10
 ```
-```shell
+
+```bash
 conda activate pyqt5
 ```
 
@@ -33,16 +36,17 @@ conda activate pyqt5
 
 安装can和sdk
 
-```shell
+```bash
 pip3 install python-can
 ```
-```shell
+
+```bash
 pip3 install piper_sdk
 ```
 
 查看piper_sdk细节，比如安装路径，版本等信息
 
-```shell
+```bash
 pip3 show piper_sdk
 ```
 
@@ -54,13 +58,13 @@ pip3 show piper_sdk
 
 若要卸载
 
-```shell
+```bash
 pip3 uninstall piper_sdk
 ```
 
 ### 1.2 安装can工具
 
-```shell
+```bash
 sudo apt update && sudo apt install can-utils ethtool
 ```
 
@@ -70,27 +74,29 @@ sudo apt update && sudo apt install can-utils ethtool
 
 安装 Qt 开发工具
 
-```shell
+```bash
 sudo apt install qt5-qmake qtbase5-dev
 ```
 
 安装pyqt5
 
-```shell
+```bash
 pip install pyqt5
 
 ```
+
 ## 2 快速使用
 
 ### 2.1 运行
 
 #### 2.1.1 常规运行
 
-```shell
+```bash
 cd ~/Piper_sdk_ui
 conda activate pyqt5
 ```
-```shell
+
+```bash
 python piper_ui.py
 ```
 
@@ -100,30 +106,36 @@ python piper_ui.py
 
 查看conda环境位置
 
-```shell
+```bash
 conda env list
 ```
+
 输出环境位置，例如
-```
+
+```plaintext
 # conda environments:
 #
 base                   /home/tian/miniconda3
 pyqt                   /home/tian/miniconda3/envs/pyqt
 ```
+
 在 ./bashrc中添加快捷指令
-```shell
+
+```bash
 echo "alias pui='~/miniconda3/envs/pyqt5/bin/python ~/Piper_sdk_ui/piper_ui.py'" >> ~/.bashrc && source ~/.bashrc
 ```
+
 注意更改conda环境和piper_ui.py的路径为自己的路径
 
 运行
 
 source ~/.bashrc可以通过重启终端自动source
-```shell
+
+```bash
 source ~/.bashrc
 ```
 
-```shell
+```bash
 pui
 ```
 
@@ -140,6 +152,7 @@ pui
 |Reset按钮|机械臂重置，需要在设定为示教模式后执行一次（注意：重置后机械臂会掉落）|
 |Gripper Zero按钮|机械臂夹爪零点设定|
 |Go Zero按钮|机械臂前往零点|
+|Joint Ctrl按钮|弹出关节控制窗口,控制机械臂关节运动|
 |（Slave / Master）选项|机械臂设置为从臂/主臂（主臂即为示教模式）|
 |Config init按钮|机械臂设置全部关节限位、关节最大速度、关节加速度为默认值|
 |Stop按钮|机械臂缓慢下落，使用后需要reset，并重新使能两次|
@@ -168,7 +181,8 @@ pui
 - **报错** ：libGL error: MESA-LOADER: failed to open iris: /usr/lib/dri/iris_dri.so: 无法打开共享目标文件: 没有那个文件或目录 (search paths /usr/lib/x86_64-linux-gnu/dri:\$${ORIGIN}/dri:/usr/lib/dri, suffix _dri)
 
 - **解决** ：
-    ```
+
+    ```bash
     conda activate pyqt5
     conda install -c conda-forge gcc
     ```

@@ -10,6 +10,7 @@ from PyQt5.QtCore import Qt, QProcess
 from piper_sdk import C_PiperInterface_V2  
 from scripts.thread_module import MyClass 
 from scripts.WidgetCreator import WidgetCreator
+from scripts.joint_control_window import JointControlWindow
 
 class MainWindow(QWidget):
     def __init__(self):
@@ -43,6 +44,7 @@ class MainWindow(QWidget):
         self.last_findcan_time = 0 # 记录查找can触发时间
         self.first_activatecan = False # 记录第一次activate，防止第一次触发can_warning
         self.warning_shown = False # warning是否已弹出
+        self.gripper = 0
 
     def init_ui(self):
         self.setWindowTitle('Piper SDK Tools')
@@ -91,8 +93,9 @@ class MainWindow(QWidget):
         self.layout.addWidget(self.hardware_edit, 1, col)
         self.layout.addWidget(self.button_hardware, 2, col)
         self.layout.addWidget(self.enable_status_edit_frame, 3, col-2, 4, col-2)
-        # 底部添加取消、退出按钮及终端信息打印窗口
+        # 底部添加取消、退出按钮及终端信息打印窗口、关节控制
         downrow=self.layout.rowCount()
+        self.layout.addWidget(self.button_joint_ctrl, downrow, col)
         self.layout.addWidget(self.button_cancel, downrow+5, col)
         self.layout.addWidget(self.button_close, downrow+6, col)
         self.layout.addWidget(self.text_edit, downrow, 0, downrow, round(col/2)-1)
@@ -113,6 +116,7 @@ class MainWindow(QWidget):
         self.button_confirm.clicked.connect(self.confirm_gripper_teaching_pendant_param_config)
         self.button_gripper_clear_err.clicked.connect(self.gripper_clear_err)
         self.button_hardware.clicked.connect(self.readhardware)
+        self.button_joint_ctrl.clicked.connect(self.open_joint_control_window)
         self.button_read_acc_limit.clicked.connect(self.read_max_acc_limit)
         self.button_start_print.clicked.connect(self.Confirmation_of_message_reading_type_options)
         self.button_stop_print.clicked.connect(self.stop_print)
@@ -142,7 +146,7 @@ class MainWindow(QWidget):
         )
 
     def create_activation_widgets(self):
-        # 机械臂操作相关按钮：使能、失能、重置、到零点、夹爪归零、参数初始化
+        # 机械臂操作相关按钮：使能、失能、重置、到零点、夹爪归零、参数初始化、关节控制
         self.button_enable = self.widget_creator.create_button(text="Enable", enabled=self.is_found and self.is_activated)
         self.button_disable = self.widget_creator.create_button(text="Disable", enabled=self.is_found and self.is_activated)
         self.button_reset = self.widget_creator.create_button(text="Reset", enabled=self.is_found and self.is_activated)
@@ -150,6 +154,7 @@ class MainWindow(QWidget):
         self.button_gripper_zero = self.widget_creator.create_button(text="Gripper Zero", enabled=self.is_found and self.is_activated)
         self.button_config_init = self.widget_creator.create_button(text="Config Init", enabled=self.is_found and self.is_activated)
         self.button_piper_stop = self.widget_creator.create_button(text="Stop", enabled=self.is_found and self.is_activated)
+        self.button_joint_ctrl = self.widget_creator.create_button(text="Joint Ctrl", enabled=self.is_enable)
 
     def create_gripper_teaching_widgets(self):
         # 夹爪及示教器参数设置框
@@ -193,7 +198,7 @@ class MainWindow(QWidget):
         self.Status_information_reading_label = self.widget_creator.create_label('Status information reading',size=(150,40))
         self.button_read_acc_limit = self.widget_creator.create_button('Max Acc Limit', size=(120, 40), enabled=self.is_found and self.is_activated)
         self.read_combobox = self.widget_creator.create_combo_box(
-            items=["Angle Speed Limit", "joint Status", "Gripper Status", "Piper Status", "FK"],
+            items=["Angle Speed Limit", "Joint Status", "Gripper Status", "Piper Status", "FK", "Read End Pose"],
             size=(150, 40),
             enabled=self.is_found and self.is_activated and self.start_button_pressed_select
         )
@@ -462,9 +467,11 @@ class MainWindow(QWidget):
         if all(x == 1 for x in enable_list):
             self.is_enable = True
             self.gripper_slider.setEnabled(self.is_enable)
+            self.button_joint_ctrl.setEnabled(self.is_enable)
         else:
             self.is_enable = False
             self.gripper_slider.setEnabled(self.is_enable)
+            self.button_joint_ctrl.setEnabled(self.is_enable)
         data = "".join(map(str, enable_list))
         can_fps = round(self.piper.GetCanFps())
         return data, can_fps
@@ -560,6 +567,9 @@ class MainWindow(QWidget):
                 f"\nControl:\n" + 
                 "\n".join([f"  {joint}: {value}" for joint, value in joint_data["Control"].items()]))
     
+    def read_end_pose(self):
+        return f"{self.piper.GetArmEndPoseMsgs()}"
+    
     def update_label(self, data):
         max_chars = 50000  # 设置最大字符数
         new_text = " ".join(map(str, data)) + "\n"
@@ -604,30 +614,21 @@ class MainWindow(QWidget):
         self.button_start_print.setEnabled(self.is_found and self.is_activated and not self.start_button_pressed)
         self.button_stop_print.setEnabled(self.is_found and self.is_activated and self.start_button_pressed)
         self.read_combobox.setEnabled(self.is_found and self.is_activated and self.start_button_pressed_select)
-        if selected_index == 0:
-            self.text_edit.append("[Info]: Reading angle speed limit.")
+        
+        actions = {
+            0: (self.read_max_angle_speed, "[Info]: Reading angle speed limit."),
+            1: (self.read_joint_status, "[Info]: Reading joint status."),
+            2: (self.read_gripper_status, "[Info]: Reading gripper status."),
+            3: (self.read_piper_status, "[Info]: Reading piper status."),
+            4: (self.getfk, "[Info]: Reading FK."),
+            5: (self.read_end_pose, "[Info]: Reading end pose.")
+        }
+
+        if selected_index in actions:
+            read_function, message = actions[selected_index]
+            self.text_edit.append(message)
             self.message_thread = MyClass()
-            self.message_thread.start_reading_thread(self.read_max_angle_speed)
-            self.message_thread.worker.update_signal.connect(self.update_label)
-        elif selected_index == 1:
-            self.text_edit.append("[Info]: Reading joint status.")
-            self.message_thread = MyClass()
-            self.message_thread.start_reading_thread(self.read_joint_status)
-            self.message_thread.worker.update_signal.connect(self.update_label)
-        elif selected_index == 2:
-            self.text_edit.append("[Info]: Reading gripper status.")
-            self.message_thread = MyClass()
-            self.message_thread.start_reading_thread(self.read_gripper_status)
-            self.message_thread.worker.update_signal.connect(self.update_label)
-        elif selected_index == 3:
-            self.text_edit.append("[Info]: Reading piper status.")
-            self.message_thread = MyClass()
-            self.message_thread.start_reading_thread(self.read_piper_status)
-            self.message_thread.worker.update_signal.connect(self.update_label)
-        elif selected_index == 4:
-            self.text_edit.append("[Info]: Reading FK.")
-            self.message_thread = MyClass()
-            self.message_thread.start_reading_thread(self.getfk)
+            self.message_thread.start_reading_thread(read_function)
             self.message_thread.worker.update_signal.connect(self.update_label)
         else:
             self.text_edit.append("[Error]: Please select a type to read.")
@@ -656,6 +657,10 @@ class MainWindow(QWidget):
         if self.piper:
             version = self.piper.GetPiperFirmwareVersion()
             self.hardware_edit.setText(f"Hardware version\n{version}")
+
+    def open_joint_control_window(self):
+        self.joint_control_window = JointControlWindow(self.piper)  # 实例化控制窗口
+        self.joint_control_window.show()
 
     def update_gripper(self):
         self.gripper = self.gripper_slider.value()
@@ -748,6 +753,7 @@ class MainWindow(QWidget):
             self.text_edit.append("[Error]: No running process to terminate.")
 
     def close(self):
+        self.joint_control_window.close()
         return super().close()
 # 运行程序的入口函数
 def main():

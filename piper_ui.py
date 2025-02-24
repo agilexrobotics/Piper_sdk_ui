@@ -280,14 +280,12 @@ class MainWindow(QWidget):
     # 弹出主从臂切换确认框
     def prompt_for_master_slave_config(self):
         reply = QMessageBox.question(self, "Attention!!!",
-                                     "Please confirm if you want to switch to Slave mode.\nBefore switching to slave, make sure the robot arm has been manually returned to a position near the origin.\nOnce confirmed, the robotic arm will reset automatically.\nBe cautious of any potential drops!!!",
+                                     "Please confirm if you want to switch to this mode.\nBefore switching, make sure the robot arm has been manually returned to a position near the origin.\nOnce confirmed, the robotic arm will reset automatically.\nBe cautious of any potential drops!!!",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.Yes:
             self.flag = 1  # 确认后设置标志为 1
-            self.text_edit.append(f"Flag set to: {self.flag}")
         else:
             self.text_edit.append("[Error]: Operation cancelled.")
-        return self.flag
 
     # 弹出密码输入框
     def prompt_for_password(self):
@@ -302,13 +300,15 @@ class MainWindow(QWidget):
         current_time = time.time()
         if current_time - self.last_canwarning_time >= 5:  # 至少 5 秒间隔
             self.last_canwarning_time = current_time  # 更新触发时间
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Warning)  # 设置消息框图标为警告
-            msg.setWindowTitle("Warnning")  # 设置消息框标题
-            msg.setText("No information for the CAN port.")  # 设置提示框的内容
-            msg.setStandardButtons(QMessageBox.Ok)  # 设置标准按钮（“确定”按钮）
-            msg.buttonClicked.connect(self.on_warning_ok)
-            msg.exec_()  # 显示消息框
+            if not self.warning_shown:
+                msg = QMessageBox()
+                msg.setIcon(QMessageBox.Warning)  # 设置消息框图标为警告
+                msg.setWindowTitle("Warnning")  # 设置消息框标题
+                msg.setText("No information for the CAN port.")  # 设置提示框的内容
+                msg.setStandardButtons(QMessageBox.Ok)  # 设置标准按钮（“确定”按钮）
+                msg.buttonClicked.connect(self.on_warning_ok)
+                self.warning_shown = True
+                msg.exec_()  # 显示消息框
         else:
             return
     
@@ -703,16 +703,25 @@ class MainWindow(QWidget):
 
     def master_slave_config(self):
         if self.selected_arm == "master":
-            self.piper.MasterSlaveConfig(0xFA, 0, 0, 0)
-            self.master_flag = True
-            self.update_ui_states_master()
+            self.prompt_for_master_slave_config()
+            if self.flag == 1:
+                self.piper.MotionCtrl_1(0x02, 0, 0)
+                time.sleep(0.6) # 最小为0.51
+                self.piper.MasterSlaveConfig(0xFA, 0, 0, 0)
+                self.master_flag = True
+                self.flag = 0
+                self.text_edit.append(f"Master-Slave config set to: Master")
+                self.update_ui_states_master()
         elif self.selected_arm == "slave":
-            toslave = self.prompt_for_master_slave_config()
-            if toslave == 1:
+            self.prompt_for_master_slave_config()
+            if self.flag == 1:
                 self.master_flag = False
                 self.update_ui_states_master()
                 self.piper.MasterSlaveConfig(0xFC, 0, 0, 0)
+                time.sleep(0.3) # 最小为0.21
+                self.piper.MotionCtrl_1(0x02, 0, 0)
                 self.piper.MotionCtrl_2(0x01, 0x01, 100, 0x00)#位置速度模式
+                self.flag = 0
                 self.text_edit.append(f"Master-Slave config set to: Slave")
             else:
                 self.text_edit.append(f"Master-Slave config still set to: Master")

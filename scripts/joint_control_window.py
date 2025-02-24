@@ -25,7 +25,14 @@ class JointControlWindow(QWidget):
             (-1.22, 1.22),  # Joint 5
             (-2.0944, 2.0944),  # Joint 6
         ]
-
+        self.joint_ranges_random = [
+            (-0.3, 0.3),  # Joint 1
+            (0, 0.5),  # Joint 2
+            (-0.5, 0),  # Joint 3
+            (-0.5, 0.5),  # Joint 4
+            (-0.5, 0.5),  # Joint 5
+            (-0.5, 0.5),  # Joint 6
+        ]
         self.sliders = []
         self.labels = []
         self.value_labels = []
@@ -105,7 +112,7 @@ class JointControlWindow(QWidget):
 
     def randomize_arm(self):
         for i, slider in enumerate(self.sliders):
-            min_angle, max_angle = self.joint_ranges[i]
+            min_angle, max_angle = self.joint_ranges_random[i]
             random_value = random.randint(int(min_angle * 1000), int(max_angle * 1000))
             slider.setValue(random_value)
         self.update_joint_value()

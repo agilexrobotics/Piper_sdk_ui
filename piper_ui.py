@@ -339,7 +339,7 @@ class MainWindow(QWidget):
         script_path = os.path.join(script_dir, 'find_all_can_port.sh')
         
         self.process = QProcess(self)
-        command_find = f"echo {self.password} | sudo -S {script_path}"
+        command_find = f"echo '{self.password}' | sudo -S sh {script_path}"
         self.process.start('sh', ['-c', command_find])  # 通过 sudo 运行脚本
         
         def updateprint():
@@ -400,7 +400,7 @@ class MainWindow(QWidget):
                 self.port_matches[self.selected_port] = tuple(port_match)
                 port_text_local = f"{name_text}   Activated: {self.port_matches[self.selected_port][2]}"
                 self.port_combobox.setItemText(self.selected_port, port_text_local)
-            command = f"echo {self.password} | sudo -S sh {script_path} {name_text} {port_speed} {self.port_matches[self.selected_port][1]}"
+            command = f"echo '{self.password}' | sudo -S sh {script_path} {name_text} {port_speed} {self.port_matches[self.selected_port][1]}"
         else:
             self.text_edit.append("[Error]: Please select a port again.")
             return

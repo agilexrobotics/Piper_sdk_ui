@@ -325,26 +325,27 @@ class MainWindow(QWidget):
     def run_findcan(self):
         self.first_activatecan = True
         current_time = time.time()
-        if current_time - self.last_findcan_time >= 0.1:  # 至少 0.1 秒间隔
-            self.last_findcan_time = current_time  # 更新触发时
-        else:
+        if current_time - self.last_findcan_time < 0.1:
             return
-        # 检查密码是否已设置
+        self.last_findcan_time = current_time  # 更新触发时间
+        
         if not self.password:
             self.password = self.prompt_for_password()
             if not self.password:
                 return
+        
         self.port_combobox.clear()  # 清空下拉框中的旧数据
         script_dir = os.path.dirname(os.path.realpath(__file__))
         script_path = os.path.join(script_dir, 'find_all_can_port.sh')
+        
         self.process = QProcess(self)
-        command_find = f"echo {self.password} | sudo -S bash {script_path}"
-        self.process.start('bash', ['-c', command_find])
-        time.sleep(0.01)
+        command_find = f"echo {self.password} | sudo -S {script_path}"
+        self.process.start('sh', ['-c', command_find])  # 通过 sudo 运行脚本
+        
         def updateprint():
             data = self.process.readAllStandardOutput().data().decode('utf-8')
             self.text_edit.append(data)
-            # 正则表达式提取端口信息
+            
             matches = re.findall(r'接口名称:\s*(\w+)\s*端口号:\s*([\w.-]+:\d+\.\d+)\s*是否已激活:\s*(\S+)', data)
             if matches:
                 for match in matches:
@@ -358,27 +359,26 @@ class MainWindow(QWidget):
                     port_text = f"{match[0]}   Activated: {match[2]}"
                     port_name = match[0]
                     for i in range(self.port_combobox.count()):
-                        item = self.port_combobox.itemText(i)
-                        if port_name in item:
+                        if port_name in self.port_combobox.itemText(i):
                             self.port_combobox.setItemText(i, port_text)
                             break
                     else:
                         self.port_combobox.addItem(port_text)
+                    
                     if 0 <= self.selected_port < len(self.port_matches):
-                        if self.port_matches[self.selected_port][2] == str("True"):
-                            self.is_activated = True
-                        elif self.port_matches[self.selected_port][2] == str("False"):
-                            self.is_activated = False
-                    # 更新各控件状态
-                    self.update_ui_states()
-            else :
+                        self.is_activated = self.port_matches[self.selected_port][2] == "True"
+                
+                self.update_ui_states()
+            else:
                 self.is_activated = False
                 self.update_ui_states()
+            
             for row in self.port_matches:
-                if len(row) > 0:
+                if row:
                     self.piper_interface_flag[row[0]] = False
-            port_num = len(self.port_matches)
-            self.text_edit.append(f"Found {port_num} ports\n")
+            
+            self.text_edit.append(f"Found {len(self.port_matches)} ports\n")
+        
         self.process.readyReadStandardOutput.connect(updateprint)
         self.is_found = True
         self.button_activatecan.setEnabled(self.is_found)
@@ -400,22 +400,26 @@ class MainWindow(QWidget):
                 self.port_matches[self.selected_port] = tuple(port_match)
                 port_text_local = f"{name_text}   Activated: {self.port_matches[self.selected_port][2]}"
                 self.port_combobox.setItemText(self.selected_port, port_text_local)
-            command = f"echo {self.password} | sudo -S bash {script_path} {name_text} {port_speed} {self.port_matches[self.selected_port][1]}"
+            command = f"echo {self.password} | sudo -S sh {script_path} {name_text} {port_speed} {self.port_matches[self.selected_port][1]}"
         else:
             self.text_edit.append("[Error]: Please select a port again.")
             return
         self.process = QProcess(self)
-        self.process.start('bash', ['-c', command])
-        self.create_piper_interface(self.port_matches[self.selected_port][0], False)
-        self.piper.ConnectPort(True)
-        self.process.readyReadStandardOutput.connect(self.handle_stdout)
-        self.readhardware()
+        self.process.start('sh', ['-c', command])
+        try:
+            self.create_piper_interface(self.port_matches[self.selected_port][0], False)
+            self.piper.ConnectPort(True)
+            self.process.readyReadStandardOutput.connect(self.handle_stdout)
+            self.readhardware()
+        except Exception as e:
+            print(e)
         # 重新查找端口以更新状态
         script_dir = os.path.dirname(os.path.realpath(__file__))
         script_path = os.path.join(script_dir, 'find_all_can_port.sh')
         self.process_find = QProcess(self)
-        command_find = f"echo {self.password} | sudo -S bash {script_path}"
-        self.process_find.start('bash', ['-c', command_find])
+        command_find = f"echo {self.password} | sudo -S sh {script_path}"
+        self.process_find.start('sh', ['-c', command_find])
+        
         def updateprint():
             data = self.process_find.readAllStandardOutput().data().decode('utf-8')
             self.text_edit.append(data)
@@ -432,19 +436,17 @@ class MainWindow(QWidget):
                     port_text = f"{match[0]}   Activated: {match[2]}"
                     port_name = match[0]
                     for i in range(self.port_combobox.count()):
-                        item = self.port_combobox.itemText(i)
-                        if port_name in item:
+                        if port_name in self.port_combobox.itemText(i):
                             self.port_combobox.setItemText(i, port_text)
                             break
                     else:
                         self.port_combobox.addItem(port_text)
+                    
                     if 0 <= self.selected_port < len(self.port_matches):
-                        if self.port_matches[self.selected_port][2] == str("True"):
-                            self.is_activated = True
-                        elif self.port_matches[self.selected_port][2] == str("False"):
-                            self.is_activated = False
-                    # 更新各控件状态
-                    self.update_ui_states()
+                        self.is_activated = self.port_matches[self.selected_port][2] == "True"
+                
+                self.update_ui_states()
+        
         self.process_find.readyReadStandardOutput.connect(updateprint)
         self.run_findcan()
 
@@ -452,7 +454,7 @@ class MainWindow(QWidget):
     def create_piper_interface(self, port: str, is_virtual: bool) -> Optional[C_PiperInterface_V2]:
         if self.piper_interface_flag.get(port) is False:
             self.piper = C_PiperInterface_V2(port, is_virtual)
-            self.piper.ConnectPort(True)
+            self.piper.ConnectPort()
             self.piper_interface_flag[port] = True
 
     # 线程中用于更新关节使能状态的函数

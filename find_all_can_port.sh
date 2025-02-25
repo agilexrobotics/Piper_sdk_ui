@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # 检查系统是否安装了 can-utils。
 if ! dpkg -l | grep -q "can-utils"; then
     echo "错误: 系统未检测到 can-utils."

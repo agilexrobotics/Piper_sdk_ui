@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # The default CAN name can be set by the user via command-line parameters.
 DEFAULT_CAN_NAME="${1:-can0}"
@@ -65,14 +65,16 @@ if [ -n "$USB_ADDRESS" ]; then
     
     # Use ethtool to find the CAN interface corresponding to the USB hardware address.
     INTERFACE_NAME=""
-    for iface in $(ip -br link show type can | awk '{print $1}'); do
+    for iface in $(ip -br link show type can | awk '{print $1}'); do 
         BUS_INFO=$(sudo ethtool -i "$iface" | grep "bus-info" | awk '{print $2}')
-        if [ "$BUS_INFO" == "$USB_ADDRESS" ]; then
+        echo $BUS_INFO
+        echo $USB_ADDRESS
+        if [ "$BUS_INFO" = "$USB_ADDRESS" ]; then
             INTERFACE_NAME="$iface"
             break
         fi
     done
-    
+
     if [ -z "$INTERFACE_NAME" ]; then
         echo "Error: Unable to find CAN interface corresponding to USB hardware address $USB_ADDRESS."
         exit 1
@@ -98,7 +100,7 @@ IS_LINK_UP=$(ip link show "$INTERFACE_NAME" | grep -q "UP" && echo "yes" || echo
 # Retrieve the bitrate of the current interface.
 CURRENT_BITRATE=$(ip -details link show "$INTERFACE_NAME" | grep -oP 'bitrate \K\d+')
 
-if [ "$IS_LINK_UP" == "yes" ] && [ "$CURRENT_BITRATE" -eq "$DEFAULT_BITRATE" ]; then
+if [ "$IS_LINK_UP" = "yes" ] && [ "$CURRENT_BITRATE" -eq "$DEFAULT_BITRATE" ]; then
     echo "Interface $INTERFACE_NAME is already activated with a bitrate of $DEFAULT_BITRATE."
     
     # Check if the interface name matches the default name.
@@ -113,7 +115,7 @@ if [ "$IS_LINK_UP" == "yes" ] && [ "$CURRENT_BITRATE" -eq "$DEFAULT_BITRATE" ]; 
     fi
 else
     # If the interface is not activated or the bitrate is different, configure it.
-    if [ "$IS_LINK_UP" == "yes" ]; then
+    if [ "$IS_LINK_UP" = "yes" ]; then
         echo "Interface $INTERFACE_NAME is already activated, but the bitrate is $CURRENT_BITRATE, which does not match the set value of $DEFAULT_BITRATE."
     else
         echo "Interface $INTERFACE_NAME is not activated or bitrate is not set."

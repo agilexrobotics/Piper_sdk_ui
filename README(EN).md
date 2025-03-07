@@ -156,6 +156,11 @@ pui
 |Gripper Zero Button|Set the gripper's zero point|
 |Go Zero Button|Move the robotic arm to the zero point|
 |Joint Ctrl Button|Open the joint control window to control the movement of the robotic arm joints|
+| Control Window | Control Slider: Slide to control a single joint of the robotic arm |
+| | Set Zero Button: Set the zero point for a single joint (Note: The joint will be disabled when used) |
+| | Center Button: Move all joints to the zero position |
+| | Random Button: Move all joints to a random position within a certain range |
+| | All Set Zero Button: Set the zero point for all six joints (The robotic arm will be disabled) |
 |(Slave / Master) Option|Set the robotic arm to Slave/Master (Master is the teach mode)|
 |Config Init Button|Set all joint limits, max speed, and max acceleration to default values|
 |Stop button|The robotic arm slowly drops. After use, it needs to be reset and enabled twice again|

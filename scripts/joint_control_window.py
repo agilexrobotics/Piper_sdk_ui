@@ -4,6 +4,7 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QSlider, QLabel, QPushButton, 
 from PyQt5.QtCore import Qt
 import time
 import random
+from functools import partial
 
 class JointControlWindow(QWidget):
     def __init__(self, piper):
@@ -14,7 +15,7 @@ class JointControlWindow(QWidget):
         self.setGeometry(350, 300, 200, 400)
 
         # 创建主垂直布局
-        self.layout = QVBoxLayout()
+        self.layout = QGridLayout()
 
         # 关节角度范围（单位：弧度）
         self.joint_ranges = [
@@ -59,30 +60,48 @@ class JointControlWindow(QWidget):
             # 创建最大值标签
             max_label = QLabel(f"{max_angle:.3f}", self)
 
+            # 创建零点设置按钮
+            set_zero_button = QPushButton("Set Zero", self)
+            joint_num = int(i+1)
+            set_zero_button.clicked.connect(partial(self.set_zero, joint_num))
+
             # 将控件添加到网格布局
-            self.grid_layout.addWidget(value_label, i * 3, 0, 1, 2)  # 实时值标签放置在上方
+            self.grid_layout.addWidget(value_label, i * 3, 0, 1, 3)  # 实时值标签放置在上方
             self.grid_layout.addWidget(min_label, i * 3 + 1, 0)  # 最小值标签
             self.grid_layout.addWidget(slider, i * 3 + 1, 1)  # 滑块
             self.grid_layout.addWidget(max_label, i * 3 + 1, 2)  # 最大值标签
+            self.grid_layout.addWidget(set_zero_button, i * 3 + 1, 2)
 
         # 创建按钮布局
-        button_layout = QVBoxLayout()
+        button_layout = QGridLayout()
 
         # 回零按钮
         self.center_button = QPushButton("Center", self)
         self.center_button.clicked.connect(self.center_arm)
-        button_layout.addWidget(self.center_button)
+        button_layout.addWidget(self.center_button, 0, 0)
 
         # 随机按钮
         self.random_button = QPushButton("Random", self)
         self.random_button.clicked.connect(self.randomize_arm)
-        button_layout.addWidget(self.random_button)
+        button_layout.addWidget(self.random_button, 1, 0)
+
+        # 全部设置零点
+        self.all_set_zero_button = QPushButton("All Set Zero", self)
+        self.all_set_zero_button.clicked.connect(partial(self.set_zero, 7))
+        button_layout.addWidget(self.all_set_zero_button, 2, 0)
 
         # 将按钮布局添加到主布局的底部
-        self.layout.addLayout(self.grid_layout)
-        self.layout.addLayout(button_layout)  # 放在底部
+        self.layout.addLayout(self.grid_layout, 0, 0)
+        self.layout.addLayout(button_layout, 1, 0)  # 放在底部
 
         self.setLayout(self.layout)
+
+    # 设置零点
+    def set_zero(self, joint_num):
+        self.piper.JointConfig(joint_num, 0, 0xAE, 500, 0)
+        self.piper.DisableArm(joint_num, 0x01)
+        time.sleep(0.5)
+        self.piper.JointConfig(joint_num, 0xAE, 0xAE, 500, 0)
 
     def update_joint_value(self):
         joint_angles = [slider.value() / 1000.0 for slider in self.sliders]

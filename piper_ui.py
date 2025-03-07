@@ -35,7 +35,6 @@ class MainWindow(QWidget):
         self.enable_status_thread = None  # 关节使能状态线程
         self.Teach_pendant_stroke = 100   # 示教器行程
         self.start_button_pressed = False  # 信息读取开始标志
-        self.start_button_pressed_select = True
         self.flag = None              # 主从切换确认标志
         self.can_fps = 0              # can口的fps
         self.limited_timers = {}  # 存储不同函数的定时器
@@ -85,21 +84,20 @@ class MainWindow(QWidget):
         self.layout.addWidget(self.button_config_init, 1, 4)
         self.layout.addWidget(self.button_piper_stop, 1, 5)
         # 第三行：添加 夹爪示教器参数设置框 和 信息读取框
-        self.layout.addWidget(self.gripper_teaching_frame, 2, 0, 5, 3)
-        self.layout.addWidget(self.read_frame, 2, 3, 5, 5)
+        self.layout.addWidget(self.gripper_teaching_frame, 2, 0, 4, 3)
+        self.layout.addWidget(self.read_frame, 2, 3, 4, 3)
         # 右上角添加 Logo 和硬件版本显示、can帧率显示、关节使能状态显示
-        col = self.layout.columnCount()
-        self.layout.addWidget(self.label, 0, col)
-        self.layout.addWidget(self.hardware_edit, 1, col)
-        self.layout.addWidget(self.button_hardware, 2, col)
-        self.layout.addWidget(self.enable_status_edit_frame, 3, col-2, 4, col-2)
+        self.layout.addWidget(self.label, 0, 6)
+        self.layout.addWidget(self.hardware_edit, 1, 6)
+        self.layout.addWidget(self.button_hardware, 2, 6)
+        self.layout.addWidget(self.enable_status_edit_frame, 3, 6, 2, 1)
         # 底部添加取消、退出按钮及终端信息打印窗口、关节控制
         downrow=self.layout.rowCount()
-        self.layout.addWidget(self.button_joint_ctrl, downrow, col)
-        self.layout.addWidget(self.button_cancel, downrow+5, col)
-        self.layout.addWidget(self.button_close, downrow+6, col)
-        self.layout.addWidget(self.text_edit, downrow, 0, downrow, round(col/2)-1)
-        self.layout.addWidget(self.message_edit, downrow, round(col/2)-1, downrow, col-3)
+        self.layout.addWidget(self.button_joint_ctrl, downrow, 6)
+        self.layout.addWidget(self.button_cancel, downrow+4, 6)
+        self.layout.addWidget(self.button_close, downrow+5, 6)
+        self.layout.addWidget(self.text_edit, downrow, 0, downrow, 3)
+        self.layout.addWidget(self.message_edit, downrow, 3, downrow, 3)
     
     def init_connections(self):
         # 连接各控件信号和对应槽函数
@@ -200,7 +198,7 @@ class MainWindow(QWidget):
         self.read_combobox = self.widget_creator.create_combo_box(
             items=["Angle Speed Limit", "Joint Status", "Gripper Status", "Piper Status", "FK", "Read End Pose"],
             size=(150, 40),
-            enabled=self.is_found and self.is_activated and self.start_button_pressed_select
+            enabled=self.is_found and self.is_activated and not self.start_button_pressed
         )
         self.button_start_print = self.widget_creator.create_button('Start', size=(80, 40), enabled=self.is_found and self.is_activated)
         self.button_stop_print = self.widget_creator.create_button('Stop', size=(80, 40), enabled=self.is_found and self.is_activated and self.start_button_pressed)
@@ -229,13 +227,14 @@ class MainWindow(QWidget):
     def create_extra_widgets(self):
         # 关节使能状态显示 can帧率显示及取消、退出按钮
         self.enable_status_edit_lable = self.widget_creator.create_label('Enable flag', size=(150, 20))
-        self.enable_status_edit = self.widget_creator.create_text_edit(size=(90, 30), enabled=True, read_only=True)
+        self.enable_status_edit = self.widget_creator.create_text_edit(size=(120, 30), enabled=True, read_only=True)
         self.can_fps_edit_lable = self.widget_creator.create_label('Can fps', size=(150, 20))
-        self.can_fps_edit = self.widget_creator.create_text_edit(size=(90, 30), enabled=True, read_only=True)
+        self.can_fps_edit = self.widget_creator.create_text_edit(size=(120, 30), enabled=True, read_only=True)
         self.enable_status_edit_frame = self.widget_creator.create_frame(line_width=0)
         enable_status_edit_layout = [(self.enable_status_edit_lable, 0, 0),(self.enable_status_edit, 1, 0),
                                      (self.can_fps_edit_lable, 2, 0),(self.can_fps_edit, 3, 0)]
         self.widget_creator.add_layout_to_frame(self.enable_status_edit_frame,enable_status_edit_layout)
+
         self.button_cancel = self.widget_creator.create_button('Cancel', size=(150, 40), enabled=True)
         self.button_close = self.widget_creator.create_button('Close', size=(150, 40), enabled=True)
 
@@ -268,7 +267,7 @@ class MainWindow(QWidget):
         self.installpos_combobox.setEnabled(self.base_state and not self.master_flag)
         self.button_installpos_confirm.setEnabled(self.base_state and not self.master_flag)
         self.button_read_acc_limit.setEnabled(self.base_state)
-        self.read_combobox.setEnabled(self.base_state and self.start_button_pressed_select)
+        self.read_combobox.setEnabled(self.base_state and not self.start_button_pressed)
         self.button_hardware.setEnabled(self.base_state)
         self.button_gripper_clear_err.setEnabled(self.base_state)
         self.name_edit.setEnabled(self.is_activated)
@@ -456,6 +455,7 @@ class MainWindow(QWidget):
             self.piper = C_PiperInterface_V2(port, is_virtual)
             self.piper.ConnectPort()
             self.piper_interface_flag[port] = True
+            self.joint_control_window = JointControlWindow(self.piper)  # 实例化控制窗口
 
     # 线程中用于更新关节使能状态的函数
     def display_enable_fun(self):
@@ -612,10 +612,9 @@ class MainWindow(QWidget):
     def Confirmation_of_message_reading_type_options(self):
         selected_index = self.read_combobox.currentIndex() if self.read_combobox.currentIndex() >= 0 else 0
         self.start_button_pressed = True
-        self.start_button_pressed_select = False
-        self.button_start_print.setEnabled(self.is_found and self.is_activated and not self.start_button_pressed)
-        self.button_stop_print.setEnabled(self.is_found and self.is_activated and self.start_button_pressed)
-        self.read_combobox.setEnabled(self.is_found and self.is_activated and self.start_button_pressed_select)
+        self.button_start_print.setEnabled(not self.start_button_pressed)
+        self.button_stop_print.setEnabled(self.start_button_pressed)
+        self.read_combobox.setEnabled(not self.start_button_pressed)
         
         actions = {
             0: (self.read_max_angle_speed, "[Info]: Reading angle speed limit."),
@@ -639,10 +638,9 @@ class MainWindow(QWidget):
         self.text_edit.append("[Info]: Stop print.")
         self.message_thread.stop_reading_thread()
         self.start_button_pressed = False
-        self.start_button_pressed_select = True
-        self.button_start_print.setEnabled(self.is_found and self.is_activated and not self.start_button_pressed)
-        self.button_stop_print.setEnabled(self.is_found and self.is_activated and self.start_button_pressed)
-        self.read_combobox.setEnabled(self.is_found and self.is_activated and self.start_button_pressed_select)
+        self.button_start_print.setEnabled(not self.start_button_pressed)
+        self.button_stop_print.setEnabled(self.start_button_pressed)
+        self.read_combobox.setEnabled(not self.start_button_pressed)
 
     def gripper_ctrl(self):
         self.piper.GripperCtrl(abs(self.gripper * 1000), 1000, 0x01, 0)
@@ -661,7 +659,6 @@ class MainWindow(QWidget):
             self.hardware_edit.setText(f"Hardware version\n{version}")
 
     def open_joint_control_window(self):
-        self.joint_control_window = JointControlWindow(self.piper)  # 实例化控制窗口
         self.joint_control_window.show()
 
     def update_gripper(self):

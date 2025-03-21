@@ -1,6 +1,6 @@
 # Piper_sdk_ui
 
-[中文](README(CN).md)
+[中文](README.MD)
 
 |Ubuntu |STATE|
 |---|---|

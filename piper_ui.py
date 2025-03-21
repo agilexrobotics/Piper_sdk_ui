@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import re
+import subprocess
 from typing import Optional
 from PyQt5.QtWidgets import (QWidget, QApplication, QGridLayout, QTextEdit, QFrame, QMessageBox, QInputDialog, QLineEdit)
 from PyQt5.QtGui import QPixmap, QTextCursor
@@ -287,13 +288,48 @@ class MainWindow(QWidget):
             self.text_edit.append("[Error]: Operation cancelled.")
 
     # 弹出密码输入框
+    # def prompt_for_password(self):
+    #     self.password, ok = QInputDialog.getText(self, "Permission Required", "Enter password:", QLineEdit.Password)
+    #     if not ok or not self.password:
+    #         self.text_edit.append("[Error]: No password entered or operation cancelled.")
+    #         return None
+    #     return self.password
+        # 弹出密码输入框并验证密码
     def prompt_for_password(self):
-        self.password, ok = QInputDialog.getText(self, "Permission Required", "Enter password:", QLineEdit.Password)
-        if not ok or not self.password:
-            self.text_edit.append("[Error]: No password entered or operation cancelled.")
-            return None
-        return self.password
+        while True:
+            self.password, ok = QInputDialog.getText(self, "Permission Required", "Enter password:", QLineEdit.Password)
+            
+            if not ok or not self.password:
+                self.text_edit.append("[Error]: No password entered or operation cancelled.")
+                return None
+            
+            # 验证密码是否正确
+            if not self.verify_sudo_password(self.password):
+                QMessageBox.warning(self, "Error", "Incorrect password. Please try again.")
+                continue  # 密码错误时重新输入
+            return self.password
 
+    # 验证密码函数，通过sudo验证
+    def verify_sudo_password(self, password):
+        try:
+            process = subprocess.Popen(
+                ['sudo', '-S', '-v'],  # '-S'表示从标准输入读取密码，'-v'验证密码有效性
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+
+            # 将密码传递给sudo进程
+            stdout, stderr = process.communicate(input=f"{password}\n".encode())
+
+            # 检查返回码，若为非零表示密码错误
+            if process.returncode != 0:
+                return False  # 密码错误
+            return True  # 密码正确
+
+        except Exception as e:
+            print(f"Error: {e}")
+            return False
     # can断开提醒
     def can_warning(self):
         current_time = time.time()

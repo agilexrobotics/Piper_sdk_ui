@@ -50,11 +50,7 @@ pip3 install piper_sdk
 pip3 show piper_sdk
 ```
 
-确保sdk版本为0.1.9
-
-0.0.x 为机械臂V1.5-2固件版本前的sdk支持
-
-当前0.0.x最后一个版本号为0.1.9
+piper_sdk >= 0.1.12
 
 若要卸载
 

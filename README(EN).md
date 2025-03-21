@@ -50,11 +50,7 @@ Check the details of piper_sdk, such as installation path, version, etc.:
 pip3 show piper_sdk
 ```
 
-Ensure the sdk version is 0.1.9.
-
-The 0.0.x versions support firmware versions prior to robotic arm V1.5-2.
-
-The last version of 0.0.x is 0.1.9.
+piper_sdk >= 0.1.12
 
 To uninstall:
 

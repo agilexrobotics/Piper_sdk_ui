@@ -18,122 +18,14 @@ Test:
 
 ## 1 安装方法
 
-### 1.1 安装环境
-
-注：python版本为3.10，建议使用conda环境，python-can版本应高于4.3.1
-
-创建并激活conda环境
-
-```bash
-conda create -n pyqt5 python=3.10
-```
-
-```bash
-conda activate pyqt5
-```
-
-### 1.2 安装依赖
-
-安装can和sdk
-
-```bash
-pip3 install python-can
-```
-
-```bash
-pip3 install piper_sdk
-```
-
-查看piper_sdk细节，比如安装路径，版本等信息
-
-```bash
-pip3 show piper_sdk
-```
-
-确保sdk版本为0.1.9
-
-0.0.x 为机械臂V1.5-2固件版本前的sdk支持
-
-当前0.0.x最后一个版本号为0.1.9
-
-若要卸载
-
-```bash
-pip3 uninstall piper_sdk
-```
-
-### 1.2 安装can工具
-
-```bash
-sudo apt update && sudo apt install can-utils ethtool
-```
-
-如果执行bash脚本出现ip: command not found，请安装ip指令，一般是sudo apt-get install iproute2
-
-### 1.3 安装PyQt5
-
-安装 Qt 开发工具
-
-```bash
-sudo apt install qt5-qmake qtbase5-dev
-```
-
-安装pyqt5
-
-```bash
-pip install pyqt5
-
-```
-
-## 2 快速使用
-
-### 2.1 运行
-
-#### 2.1.1 常规运行
+注：python版本为3.10，需要conda环境
 
 ```bash
 cd ~/Piper_sdk_ui
-conda activate pyqt5
+bash env.sh
 ```
 
-```bash
-python piper_ui.py
-```
-
-#### 2.1.2 快捷运行
-
-配置（注意需为bash终端）
-
-查看conda环境位置
-
-```bash
-conda env list
-```
-
-输出环境位置，例如
-
-```plaintext
-# conda environments:
-#
-base                   /home/tian/miniconda3
-pyqt                   /home/tian/miniconda3/envs/pyqt
-```
-
-在 ./bashrc中添加快捷指令
-
-```bash
-echo "alias pui='~/miniconda3/envs/pyqt5/bin/python ~/Piper_sdk_ui/piper_ui.py'" >> ~/.bashrc && source ~/.bashrc
-```
-
-注意更改conda环境和piper_ui.py的路径为自己的路径
-
-运行
-
-source ~/.bashrc可以通过重启终端自动source
-
-```bash
-source ~/.bashrc
-```
+## 2 快速使用
 
 ```bash
 pui
@@ -198,4 +90,3 @@ pui
 - C_PiperInterface 接口类在实例化时可传入激活的can路由名称，这个名称可以通过ifconfig得到
 - 有时执行can发送，终端反馈Message NOT sent，是can模块没有成功连接设备，先检查模块与机械臂的连接状态，然后将机械臂断电后上电，再尝试发送
 - sdk的interface在创建实例后会检测是否激活自带的can模块，如果是其它can设备，可以将第二个形参设定为False，如：piper = C_PiperInterface_V2("can0",False)
-- **机械臂的mit协议控制单关节电机为高级功能,使用时需注意,此协议的使用不当会导致机械臂损坏！！！**

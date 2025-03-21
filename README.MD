@@ -27,6 +27,8 @@ bash env.sh
 
 ## 2 快速使用
 
+终端运行
+
 ```bash
 pui
 ```

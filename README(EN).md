@@ -18,17 +18,67 @@ Test:
 
 ## 1 Installation Method
 
-**Note:** Python version 3.10 is required, and a Conda environment is necessary.
+Clone the Project
+
+```shell
+cd $HOME
+git clone https://github.com/agilexrobotics/Piper_sdk_ui.git
+```
+
+Note: Python version 3.10 is required, and a conda environment is needed.
+
+Install System Dependencies
 
 ```bash
-cd ~/Piper_sdk_ui
-bash env.sh
+sudo apt update -y
+sudo apt install -y can-utils ethtool
+sudo apt install -y qt5-qmake qtbase5-dev
+```
+
+Set Up Python Environment
+
+```bash
+conda create -n piper_sdk_ui python=3.10 -y
+conda activate piper_sdk_ui
+pip3 install python-can
+pip3 install piper_sdk
+pip3 install pyqt5
 ```
 
 ## 2 Quick Start
 
+Activate the Conda Environment
+
 ```bash
-pui
+conda activate piper_sdk_ui
+```
+
+Run the UI File
+
+```bash
+cd $HOME/Piper_sdk_ui
+python3 ./piper_ui.py
+```
+
+### 2.1 You can also add the command to your system environment variables
+
+Check the Path of the Virtual Environment
+
+```shell
+conda env list | grep piper_sdk_ui
+```
+
+Typical output might look like:
+
+```shell
+piper_sdk_ui                    /home/agilex/miniconda3/envs/piper_sdk_ui
+```
+
+Then add a shortcut like this:
+
+```shell
+echo "alias pui='$HOME/miniconda3/envs/piper_sdk_ui/bin/python ~/Piper_sdk_ui/piper_ui.py'" >> ~/.bashrc
+source ~/.bashrc
 ```
 
 ### 2.2 Features

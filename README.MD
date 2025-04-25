@@ -18,17 +18,67 @@ Test:
 
 ## 1 安装方法
 
+克隆项目
+
+```shell
+cd $HOME
+git clone https://github.com/agilexrobotics/Piper_sdk_ui.git
+```
+
 注：python版本为3.10，需要conda环境
 
+安装系统依赖
+
 ```bash
-cd ~/Piper_sdk_ui
-bash env.sh
+sudo apt update -y
+sudo apt install -y can-utils ethtool
+sudo apt install -y qt5-qmake qtbase5-dev
+```
+
+python环境搭建
+
+```bash
+conda create -n piper_sdk_ui python=3.10 -y
+conda activate piper_sdk_ui
+pip3 install python-can
+pip3 install piper_sdk
+pip3 install pyqt5
 ```
 
 ## 2 快速使用
 
+激活conda环境
+
 ```bash
-pui
+conda activate piper_sdk_ui
+```
+
+运行ui文件
+
+```bash
+cd $HOME/Piper_sdk_ui
+python3 ./piper_ui.py
+```
+
+你也可以将命令写入系统环境变量
+
+查看虚拟环境所在路径
+
+```shell
+conda env list | grep piper_sdk_ui
+```
+
+显示一般如下
+
+```shell
+piper_sdk_ui                    /home/agilex/miniconda3/envs/piper_sdk_ui
+```
+
+然后操作如下
+
+```shell
+echo "alias pui='$HOME/miniconda3/envs/piper_sdk_ui/bin/python ~/Piper_sdk_ui/piper_ui.py'" >> ~/.bashrc
+source ~/.bashrc
 ```
 
 ### 2.2 功能

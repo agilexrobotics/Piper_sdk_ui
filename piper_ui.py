@@ -165,6 +165,8 @@ class MainWindow(QWidget):
         # 夹爪行程下拉框
         self.gripper_combobox_label = self.widget_creator.create_label("Gripper stroke", size=(150, 15))
         self.gripper_combobox = self.widget_creator.create_combo_box(items=["70", "0", "100"], size=(60, 30), enabled=self.is_found and self.is_activated)
+        self.gripper_combobox_level = \
+        self.widget_creator.create_combo_box(items=["1","2","3","4","5","6","7","8","9","10"], size=(40, 20), enabled=self.is_found and self.is_activated)
         self.button_confirm = self.widget_creator.create_button(text="Confirm", size=(80, 40), enabled=self.is_found and self.is_activated)
         # 夹爪清错按钮
         self.button_gripper_clear_err = self.widget_creator.create_button(text="Gripper\ndisable\nand\nclear err", size=(60, 80), enabled=self.is_found and self.is_activated)
@@ -178,6 +180,7 @@ class MainWindow(QWidget):
             (self.slider_text_edit, 1, 1),
             (self.gripper_combobox_label, 2, 0),
             (self.gripper_combobox, 3, 0),
+            (self.gripper_combobox_level, 4, 1),
             (self.button_confirm, 3, 1),
             (self.button_gripper_clear_err, 1, 2, 5, 3),
             (self.gripper_slider_label, 4, 0),
@@ -264,6 +267,7 @@ class MainWindow(QWidget):
         self.button_piper_stop.setEnabled(self.base_state and not self.master_flag)
         self.slider.setEnabled(self.base_state and not self.master_flag)
         self.gripper_combobox.setEnabled(self.base_state and not self.master_flag)
+        self.gripper_combobox_level.setEnabled(self.base_state and not self.master_flag)
         self.button_confirm.setEnabled(self.base_state and not self.master_flag)
         self.installpos_combobox.setEnabled(self.base_state and not self.master_flag)
         self.button_installpos_confirm.setEnabled(self.base_state and not self.master_flag)
@@ -558,6 +562,7 @@ class MainWindow(QWidget):
         print(f"Current Teach pendant stroke: {self.Teach_pendant_stroke}")
 
     def confirm_gripper_teaching_pendant_param_config(self):
+        self.teaching_fric = self.gripper_combobox_level.currentIndex() + 1
         if self.gripper_combobox.currentIndex() == 0:
             self.gripper_pendant = 70
             self.gripper_slider.setRange(0, 70)
@@ -567,8 +572,13 @@ class MainWindow(QWidget):
         elif self.gripper_combobox.currentIndex() == 2:
             self.gripper_pendant = 100
             self.gripper_slider.setRange(0, 100)
+        # self.piper.GripperTeachingPendantParamConfig(self.Teach_pendant_stroke, self.gripper_pendant, self.teaching_fric)
+        # self.text_edit.append(f"Teaching pendant stroke: {self.Teach_pendant_stroke}\n \
+        #                     Gripper stroke: {self.gripper_pendant}\n \
+        #                     Teaching fric: {self.teaching_fric}")
         self.piper.GripperTeachingPendantParamConfig(self.Teach_pendant_stroke, self.gripper_pendant)
-        self.text_edit.append(f"Teaching pendant stroke: {self.Teach_pendant_stroke}\nGripper stroke: {self.gripper_pendant}")
+        self.text_edit.append(f"Teaching pendant stroke: {self.Teach_pendant_stroke}\n \
+                            Gripper stroke: {self.gripper_pendant}\n")
 
     def update_text(self, edit):
         cursor = edit.textCursor()

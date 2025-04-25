@@ -74,11 +74,17 @@ conda env list | grep piper_sdk_ui
 piper_sdk_ui                    /home/agilex/miniconda3/envs/piper_sdk_ui
 ```
 
-然后操作如下
+然后操作如下，注意这里使用的bash，如果需要其它shell可能有细微区别，这里不赘述
 
 ```shell
 echo "alias pui='$HOME/miniconda3/envs/piper_sdk_ui/bin/python ~/Piper_sdk_ui/piper_ui.py'" >> ~/.bashrc
 source ~/.bashrc
+```
+
+然后即可以使用全局指令来打开ui
+
+```shell
+pui
 ```
 
 ### 2.2 功能

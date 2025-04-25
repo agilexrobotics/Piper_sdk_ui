@@ -74,11 +74,17 @@ Typical output might look like:
 piper_sdk_ui                    /home/agilex/miniconda3/envs/piper_sdk_ui
 ```
 
-Then add a shortcut like this:
+Then proceed as follows. Note that bash is used here. If other shells are needed, there may be slight differences. I will not go into details here.
 
 ```shell
 echo "alias pui='$HOME/miniconda3/envs/piper_sdk_ui/bin/python ~/Piper_sdk_ui/piper_ui.py'" >> ~/.bashrc
 source ~/.bashrc
+```
+
+Then you can use the global command to open the ui
+
+```shell
+pui
 ```
 
 ### 2.2 Features

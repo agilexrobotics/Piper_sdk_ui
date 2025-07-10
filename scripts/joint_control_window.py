@@ -61,16 +61,16 @@ class JointControlWindow(QWidget):
             max_label = QLabel(f"{max_angle:.3f}", self)
 
             # 创建零点设置按钮
-            set_zero_button = QPushButton("Set Zero", self)
-            joint_num = int(i+1)
-            set_zero_button.clicked.connect(partial(self.set_zero, joint_num))
+            # set_zero_button = QPushButton("Set Zero", self)
+            # joint_num = int(i+1)
+            # set_zero_button.clicked.connect(partial(self.set_zero, joint_num))
 
             # 将控件添加到网格布局
             self.grid_layout.addWidget(value_label, i * 3, 0, 1, 3)  # 实时值标签放置在上方
             self.grid_layout.addWidget(min_label, i * 3 + 1, 0)  # 最小值标签
             self.grid_layout.addWidget(slider, i * 3 + 1, 1)  # 滑块
             self.grid_layout.addWidget(max_label, i * 3 + 1, 2)  # 最大值标签
-            self.grid_layout.addWidget(set_zero_button, i * 3 + 1, 2)
+            # self.grid_layout.addWidget(set_zero_button, i * 3 + 1, 2)
 
         # 创建按钮布局
         button_layout = QGridLayout()
@@ -86,9 +86,9 @@ class JointControlWindow(QWidget):
         button_layout.addWidget(self.random_button, 1, 0)
 
         # 全部设置零点
-        self.all_set_zero_button = QPushButton("All Set Zero", self)
-        self.all_set_zero_button.clicked.connect(partial(self.set_zero, 7))
-        button_layout.addWidget(self.all_set_zero_button, 2, 0)
+        # self.all_set_zero_button = QPushButton("All Set Zero", self)
+        # self.all_set_zero_button.clicked.connect(partial(self.set_zero, 7))
+        # button_layout.addWidget(self.all_set_zero_button, 2, 0)
 
         # 将按钮布局添加到主布局的底部
         self.layout.addLayout(self.grid_layout, 0, 0)
